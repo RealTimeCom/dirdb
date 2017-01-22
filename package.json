@@ -1,0 +1,33 @@
+{
+    "name": "dirdb",
+    "version": "0.1.0",
+    "description": "DirDB",
+    "main": "index.js",
+    "scripts": {
+        "test": "node test.js"
+    },
+    "dependencies": {
+        "service-adapter": "~3.1.3"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/RealTimeCom/dirdb.git"
+    },
+    "keywords": [
+        "db",
+        "database",
+        "dir",
+        "storage",
+        "store",
+        "key",
+        "value",
+        "stream",
+        "cache"
+    ],
+    "author": "Tanase Laurentiu Iulian <expertphp@gmail.com> (https://github.com/RealTimeCom)",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/RealTimeCom/dirdb/issues"
+    },
+    "homepage": "https://github.com/RealTimeCom/dirdb"
+}
