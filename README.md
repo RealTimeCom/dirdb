@@ -190,10 +190,10 @@ console.log('divisor', Math.pow(35, 4)); // 1500625
 // key entries are stored on 1500625 max sub-directories
 ```
 ### Few examples of how to calculate the directory divisor, at maximum level
-* md5-base64   Math.pow(64, 22) - 64 unique characters, 22 long max level
-* md5-hex      Math.pow(35, 32) - 35 unique characters, 32 long max level
-* sha1-base64  Math.pow(64, 27) - 64 unique characters, 27 long max level
-* sha1-hex     Math.pow(35, 40) - 35 unique characters, 40 long max level
+* `md5-base64`   Math.pow(64, 22) - 64 unique characters, 22 long max level
+* `md5-hex`      Math.pow(35, 32) - 35 unique characters, 32 long max level
+* `sha1-base64`  Math.pow(64, 27) - 64 unique characters, 27 long max level
+* `sha1-hex`     Math.pow(35, 40) - 35 unique characters, 40 long max level
 
 
 **For more info, consult or run the <a href="https://github.com/RealTimeCom/dirdb/blob/master/test.js"><b>test.js</b></a> file.**
