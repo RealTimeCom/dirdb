@@ -22,9 +22,9 @@ Compare test results with <a href="https://travis-ci.org/RealTimeCom/dirdb">trav
 const dirdb = require('dirdb');
 ```
 ### Define the database root directory
-Make sure the directory exists and have the right user permissions mode.
+When first time, make sure the directory exists, is empty, and have the right user permissions mode.
 ```js
-const db = new dirdb(__dirname); // or full pathname '/root/path/name'
+const db = new dirdb('/dir/path/name');
 ```
 ### Make dir `auth`, and verify if not exists
 ```js
