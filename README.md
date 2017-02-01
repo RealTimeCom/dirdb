@@ -21,7 +21,8 @@ Compare test results with <a href="https://travis-ci.org/RealTimeCom/dirdb">trav
 ```js
 const db = require('dirdb');
 ```
-### Define the database root directory `__dirname` (e.g. current directory), make sure the directory exists and have the right user permissions mode.
+### Define the database root directory
+Make sure the directory exists and have the right user permissions mode.
 ```js
 const db = new dirdb(__dirname); // or full pathname '/root/path/name'
 ```
@@ -174,7 +175,7 @@ const db = new dirdb('/dir/pathname', {
     digest: 'hex',
 });
 ```
-### Make dir options example
+### `db.mkdir()` options example
 High level, means high directory divisor. To increase I/O speed on high number of keys entries, make sure you define a high level value on `db.mkdir` options. But, if the directory will have few key entries, the high level value will decrease the I/O speed.
 ```js
 // dir name 'logs'
