@@ -156,7 +156,7 @@ socket.server close
 */
 ```
 ### `db.mkdir(name, options)`
-* `name` - String directory table name, without any slashes
+* `name` - String directory table name, without slashes
 * `options` - Object, see below
 
 ### Directory table options
@@ -171,8 +171,10 @@ socket.server close
 You can overwrite the default directory options:
 ```js
 const db = new dirdb('/dir/pathname', {
-    level: 3, // overwrite default options
+    // overwrite default options
+    level: 3,
     digest: 'hex',
+    gc: false
 });
 ```
 ### `db.mkdir()` options example
