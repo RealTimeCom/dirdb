@@ -8,7 +8,7 @@
 ```sh
 $ npm install dirdb
 ```
-#### Run tests
+### Run tests
 Browse module (e.g. `node_modules/dirdb`) install directory, and run tests:
 ```sh
 $ npm test
@@ -17,15 +17,15 @@ $ node test.js
 ```
 Compare test results with <a href="https://travis-ci.org/RealTimeCom/dirdb">travis run tests</a>.
 
-#### Include in your script
+### Include in your script
 ```js
 const db = require('dirdb');
 ```
-#### Define the database root directory `__dirname` (e.g. current directory), make sure the directory exists and have the right user permissions mode.
+### Define the database root directory `__dirname` (e.g. current directory), make sure the directory exists and have the right user permissions mode.
 ```js
 const db = new dirdb(__dirname); // or full pathname '/root/path/name'
 ```
-#### Make dir `auth`, and verify if not exists
+### Make dir `auth`, and verify if not exists
 ```js
 if (!db.isdir('auth')) { // verify if dir 'auth' exists
     db.mkdir('auth'); // make dir 'auth'
@@ -43,7 +43,7 @@ list { auth:
      gc: true } }
 */
 ```
-#### SYNC methods example
+### SYNC methods example
 ```js
 // dir = 'auth', key = 'user', value = 'pass'
 console.log('put', db.put('auth', 'user', 'pass'));
@@ -57,7 +57,7 @@ get pass iyn4swkl.0
 del iyn4swkl.0
 */
 ```
-#### ASYNC methods example
+### ASYNC methods example
 ```js
 // dir = 'auth', key = 'user', value = 'pass'
 db.put('auth', 'user', 'pass', (e, uuid) => {
@@ -80,7 +80,7 @@ get undefined pass iyn4swkp.1
 del undefined iyn4swkp.1
 */
 ```
-#### Stream example
+### Stream example
 ```js
 const client = db.client();
 client.pipe(db.server()).pipe(client);
@@ -105,7 +105,7 @@ get { uuid: 'iyn4swl0.2' } pass
 del { uuid: 'iyn4swl0.2' }
 */
 ```
-#### Socket stream example
+### Socket stream example
 ```js
 const net = require('net');
 const server = db.server();
@@ -154,11 +154,11 @@ list {}
 socket.server close
 */
 ```
-#### `db.mkdir(name, options)`
+### `db.mkdir(name, options)`
 * `name` - String directory table name, without any slashes
 * `options` - Object, see below
 
-#### Directory table options
+### Directory table options
 * `level` - Number, key hash directory divisor, default `2`, minim `0` and max limited by `algorithm` and `digest` value, see below
 * `dmode` - Number, directory mode, default `0o700`
 * `fmode` - Number, file mode, default `0o600`
@@ -174,7 +174,7 @@ const db = new dirdb('/dir/pathname', {
     digest: 'hex',
 });
 ```
-#### Make dir options example
+### Make dir options example
 High level, means high directory divisor. To increase I/O speed on high number of keys entries, make sure you define a high level value on `db.mkdir` options. But, if the directory will have few key entries, the high level value will decrease the I/O speed.
 ```js
 // dir name 'logs'
@@ -188,7 +188,7 @@ db.mkdir('logs', {
 console.log('divisor', Math.pow(35, 4)); // 1500625
 // key entries are stored on 1500625 max sub-directories
 ```
-#### Few examples of how to calculate the directory divisor, at maximum level
+### Few examples of how to calculate the directory divisor, at maximum level
 * md5-base64   Math.pow(64, 22) - 64 unique characters, 22 long max level
 * md5-hex      Math.pow(35, 32) - 35 unique characters, 32 long max level
 * sha1-base64  Math.pow(64, 27) - 64 unique characters, 27 long max level
