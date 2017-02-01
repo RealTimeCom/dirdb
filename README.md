@@ -19,7 +19,7 @@ Compare test results with <a href="https://travis-ci.org/RealTimeCom/dirdb">trav
 
 ### Include in your script
 ```js
-const db = require('dirdb');
+const dirdb = require('dirdb');
 ```
 ### Define the database root directory
 Make sure the directory exists and have the right user permissions mode.
