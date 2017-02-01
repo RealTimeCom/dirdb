@@ -3,7 +3,10 @@
 
 const dirdb = require('./index.js'), fs = require('fs'), sep = require('path').sep;
 
-const db = new dirdb(fs.mkdirSync(__dirname + sep + 'test')); // make a test directory, fs.mkdirSync(__dirname + sep + 'test') '/home/laur/db/1-test'
+const root = __dirname + sep + 'test';
+fs.mkdirSync(root); // make a test directory
+
+const db = new dirdb(root); // init database
 
 console.log('list', db.list());
 if (!db.isdir('auth')) { // verify if dir 'auth' exists
