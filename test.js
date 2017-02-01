@@ -1,9 +1,9 @@
 /* TEST FILE - Copyright (c) 2017 dirdb - Tanase Laurentiu Iulian - https://github.com/RealTimeCom/dirdb */
 'use strict';
 
-const dirdb = require('./index.js');
+const dirdb = require('./index.js'), fs = require('fs'), sep = require('path').sep;
 
-const db = new dirdb(__dirname); // __dirname '/home/laur/db/1-test'
+const db = new dirdb(fs.mkdirSync(__dirname + sep + 'test')); // make a test directory, fs.mkdirSync(__dirname + sep + 'test') '/home/laur/db/1-test'
 
 console.log('list', db.list());
 if (!db.isdir('auth')) { // verify if dir 'auth' exists
