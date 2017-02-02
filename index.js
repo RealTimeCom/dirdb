@@ -10,75 +10,97 @@ const fs = require('fs'),
     rmdir = require('rm-dir');
 
 function request(resp, head, body) {
-    //console.log('request', head, body.toString());
     if ('f' in head && typeof head.f === 'string') {
         switch (head.f) {
-            case 'mkdir': this.db.mkdir(head.d, head.o, (e, dir) => resp({ error: e ? e.message : e, dir: dir })); break;
-            case 'rmdir': this.db.rmdir(head.d, e => resp({ error: e ? e.message : e })); break;
-            case 'put':   this.db.put(head.d, body.slice(0, head.k), body.slice(head.k), (e, uid) => resp({ error: e ? e.message : e, uid: uid })); break;
-            case 'get':   this.db.get(head.d, body, (e, data, uid) => resp({ error: e ? e.message : e, uid: uid }, data)); break;
-            case 'del':   this.db.del(head.d, body, (e, uid) => resp({ error: e ? e.message : e, uid: uid })); break;
-            case 'list':  resp(this.db.c); break;
-            case 'isdir': resp(this.db.isdir(head.d)); break;
-            default: resp({ error: 'function "' + head.f + '" not found' });
+            case 'mkdir': this.db.mkdir(head.d, head.o, (e, dir) => resp({ f: head.f, e: e ? e.message : undefined, r: dir })); break;
+            case 'put':   this.db.put(head.d, body.slice(0, head.k), body.slice(head.k), (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: uid })); break;
+            case 'del':   this.db.del(head.d, body, (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: uid })); break;
+            case 'get':   this.db.get(head.d, body, (e, data, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: uid }, data)); break;
+            case 'rmdir': this.db.rmdir(head.d, e => resp({ f: head.f, e: e ? e.message : undefined })); break;
+            case 'list':  resp({ f: head.f, r: this.db.c }); break;
+            case 'isdir': resp({ f: head.f, r: this.db.isdir(head.d) }); break;
+            default: resp({ e: 'function "' + head.f + '" not found' });
         }
-    } else { resp({ error: 'function not found' }); }
+    } else { resp({ e: 'function not found' }); }
+}
+function filter(resp, head, body) {
+    if (resp) {
+        if ('f' in head && typeof head.f === 'string') {
+            switch (head.f) {
+                case 'mkdir':
+                case 'put':
+                case 'del':   resp(head.e, head.r); break;
+                case 'get':   resp(head.e, body, head.r); break;
+                case 'rmdir': resp(head.e); break;
+                case 'list':
+                case 'isdir': resp(head.r); break;
+                default: resp(head.e);
+            }
+        } else { resp(head.e); }
+    }
 }
 class client extends rpc.client {
-    constructor() { super(); }
+    constructor() { super(filter); }
 }
 client.prototype.mkdir = function(dir, opt, resp) {
     this.exec(resp, { f: 'mkdir', d: dir, o: opt });
+    return this;
 };
 client.prototype.rmdir = function(dir, resp) {
     this.exec(resp, { f: 'rmdir', d: dir });
+    return this;
 };
 client.prototype.put = function(dir, key, val, resp) {
     key = toBuffer(key);
     this.exec(resp, { f: 'put', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
+    return this;
 };
 client.prototype.get = function(dir, key, resp) {
     this.exec(resp, { f: 'get', d: dir }, key);
+    return this;
 };
 client.prototype.del = function(dir, key, resp) {
     this.exec(resp, { f: 'del', d: dir }, key);
+    return this;
 };
 client.prototype.list = function(resp) {
     this.exec(resp, { f: 'list' });
+    return this;
 };
 client.prototype.isdir = function(dir, resp) {
     this.exec(resp, { f: 'list', d: dir });
+    return this;
 };
 
 class dirdb {
     constructor(dir, opt) {
-        this.s = typeof opt === 'object' ? dirdb.option(opt, dirdb.p) : dirdb.p; // overwrite default dir options
+        this.s = typeof opt === 'object' ? option(opt, dirdb.p) : dirdb.p; // overwrite default dir options
         this.f = '.dirdb.json'; // dir conf file name
         this.i = 0; // unique id
         this.conf(dir); // cache dir config, sync parse this.f files from each base dir
     }
 }
 dirdb.p = { level: 2, dmode: 0o700, fmode: 0o600, algorithm: 'md5', digest: 'base64', compress: 'none', gc: true }; // default dir options
-dirdb.option = function(opt, p) {
+function option(opt, p) {
     if (typeof opt === 'object') {
         const algorithm = 'algorithm' in opt && typeof opt.algorithm === 'string' && (opt.algorithm === 'md5' || opt.algorithm === 'sha1' || opt.algorithm === 'sha256' || opt.algorithm === 'sha512') ? opt.algorithm : p.algorithm;
         const digest = 'digest' in opt && typeof opt.digest === 'string' && (opt.digest === 'base64' || opt.digest === 'hex') ? opt.digest : p.digest;
         let level = p.level;
         if ('level' in opt) {
             const l = parseInt(opt.level);
-            if (l >= 0 && l <= 128) {
+            if (l >= 0 && l < 128) {
                 if (algorithm === 'md5') {
-                    if (digest === 'base64' && l <= 22) { level = l; }
-                    else if (digest === 'hex' && l <= 32) { level = l; }
+                    if (digest === 'base64' && l < 22) { level = l; }
+                    else if (digest === 'hex' && l < 32) { level = l; }
                 } else if (algorithm === 'sha1') {
-                    if (digest === 'base64' && l <= 27) { level = l; }
-                    else if (digest === 'hex' && l <= 40) { level = l; }
+                    if (digest === 'base64' && l < 27) { level = l; }
+                    else if (digest === 'hex' && l < 40) { level = l; }
                 } else if (algorithm === 'sha256') {
-                    if (digest === 'base64' && l <= 43) { level = l; }
-                    else if (digest === 'hex' && l <= 64) { level = l; }
+                    if (digest === 'base64' && l < 43) { level = l; }
+                    else if (digest === 'hex' && l < 64) { level = l; }
                 } else if (algorithm === 'sha512') {
-                    if (digest === 'base64' && l <= 86) { level = l; }
-                    else if (digest === 'hex' && l <= 128) { level = l; }
+                    if (digest === 'base64' && l < 86) { level = l; }
+                    else if (digest === 'hex' && l < 128) { level = l; }
                 }
             }
         }
@@ -94,7 +116,16 @@ dirdb.option = function(opt, p) {
     } else {
         return p;
     }
-};
+}
+function divisor(c) {
+    switch (c.algorithm) {
+        case 'md5': return c.digest === 'base64' ? 22 + c.level : 32 + c.level;
+        case 'sha1': return c.digest === 'base64' ? 27 + c.level : 40 + c.level;
+        case 'sha256': return c.digest === 'base64' ? 43 + c.level : 64 + c.level;
+        case 'sha512': return c.digest === 'base64' ? 86 + c.level : 128 + c.level;
+    }
+    throw new Error('invalid algorithm');
+}
 dirdb.prototype.conf = function(dir) {
     if (typeof dir !== 'string') { throw new Error('invalid dir type "' + (typeof dir) + '", String expected'); }
     dir = path.normalize(dir);
@@ -107,7 +138,7 @@ dirdb.prototype.conf = function(dir) {
             if (s.isDirectory()) {
                 s = fs.lstatSync(dir + path.sep + v + path.sep + this.f); // read dir config file
                 if (s.isFile() && s.size > 0) {
-                    c[v] = dirdb.option(JSON.parse(fs.readFileSync(dir + path.sep + v + path.sep + this.f).toString()), this.s); // parse options
+                    c[v] = option(JSON.parse(fs.readFileSync(dir + path.sep + v + path.sep + this.f).toString()), this.s); // parse options
                 }
             }
         }
@@ -118,24 +149,25 @@ dirdb.prototype.conf = function(dir) {
 dirdb.prototype.mkdir = function(dir, opt, cb) { // don't use slashes \ / or dots . in the dir name
     if (typeof opt === 'function' && cb === undefined) { cb = opt; }
     if (typeof cb === 'function') { // async
-        if (!(dir = safeDir(dir, cb))) { return; }
-        if (dir in this.c) { cb(new Error('dir "' + dir + '" exists')); } else {
-            opt = dirdb.option(opt, this.s); // parse options
-            fs.mkdir(this.d + path.sep + dir, opt.dmode, e => {
-                if (e) { cb(e); } else {
-                    fs.writeFile(this.d + path.sep + dir + path.sep + this.f, JSON.stringify(opt), { mode: opt.fmode }, e => {
-                        if (e) { cb(e); } else {
-                            this.c[dir] = opt;
-                            cb(undefined, dir);
-                        }
-                    });
-                }
-            });
+        if (!(dir = safeDir(dir))) { cb(new Error('invalid dir value')); } else {
+            if (dir in this.c) { cb(new Error('dir "' + dir + '" exists')); } else {
+                opt = option(opt, this.s); // parse options
+                fs.mkdir(this.d + path.sep + dir, opt.dmode, e => {
+                    if (e) { cb(e); } else {
+                        fs.writeFile(this.d + path.sep + dir + path.sep + this.f, JSON.stringify(opt), { mode: opt.fmode }, e => {
+                            if (e) { cb(e); } else {
+                                this.c[dir] = opt;
+                                cb(undefined, dir);
+                            }
+                        });
+                    }
+                });
+            }
         }
     } else { // sync
-        dir = safeDir(dir);
+        if (!(dir = safeDir(dir))) { throw new Error('invalid dir value'); }
         if (dir in this.c) { throw new Error('dir "' + dir + '" exists'); }
-        opt = dirdb.option(opt, this.s); // parse options
+        opt = option(opt, this.s); // parse options
         fs.mkdirSync(this.d + path.sep + dir, opt.dmode);
         fs.writeFileSync(this.d + path.sep + dir + path.sep + this.f, JSON.stringify(opt), { mode: opt.fmode });
         this.c[dir] = opt;
@@ -326,6 +358,23 @@ dirdb.prototype.del = function(dir, key, cb) {
         throw new Error('key not found');
     }
 };
+
+dirdb.prototype.keys = function(dir, opt, cb) {
+    if (typeof opt === 'function' && cb === undefined) { cb = opt; }
+
+    opt = range(opt);
+    dirLength = divisor(this.c[dir]);
+
+    if (typeof cb === 'function') { // async
+        if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
+            //
+        }
+    } else { // sync
+        if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
+        return scan();
+    }
+};
+
 dirdb.prototype.list = function() { return this.c; };
 dirdb.prototype.isdir = function(dir) { return typeof dir === 'string' && dir in this.c ? this.c[dir] : undefined; };
 
@@ -341,19 +390,10 @@ dirdb.prototype.client = function() { return new client; };
 // cache common values
 const empty = Buffer.allocUnsafeSlow(0);
 
-function safeDir(dir, cb) {
-    const t = (typeof cb === 'function');
-    if (typeof dir !== 'string') {
-        const e = 'invalid dir value type "' + (typeof dir) + '", String expected';
-        if (t) { cb(e); return false; }
-        else { throw new Error(e); }
-    }
+function safeDir(dir) {
+    if (typeof dir !== 'string') { return false; }
     dir = path.parse(dir).name;
-    if (dir === '' || dir === '.' || dir === '..') {
-        const e = 'invalid dir name "' + dir + '"';
-        if (t) { cb(e); return false; }
-        else { throw new Error(e); }
-    }
+    if (dir === '' || dir === '.' || dir === '..') { return false; }
     return dir;
 }
 function toBuffer(v) {
@@ -408,6 +448,21 @@ function make(b, p, m, cb) { // make(dirdb.d + path.sep + dir, xpath(hash, level
             }
         }
     }
+}
+function range(opt) {
+    let r;
+    if (typeof opt === 'object' && ('start' in opt || 'end' in opt)) {
+        const start = 'start' in opt ? parseInt(opt.start) : undefined;
+        const end = 'end' in opt ? parseInt(opt.end) : undefined;
+        if (start !== undefined && end !== undefined) {
+            if (start < end && start >= 0 && end > 0) { r = { start: start, end: end }; }
+        } else if (start !== undefined) {
+            if (start >= 0) { r = { start: start }; }
+        } else if (end !== undefined) {
+            if (end > 0) { r = { end: end }; }
+        }
+    }
+    return r;
 }
 function compress(data, type, cb) {
     if (typeof cb === 'function') { // async

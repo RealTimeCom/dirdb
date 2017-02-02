@@ -55,9 +55,9 @@ console.log('get', data.toString(), uid);
 console.log('del', db.del('auth', 'user'));
 /** console.log:
 ---
-put iyn4swkl.0
-get pass iyn4swkl.0
-del iyn4swkl.0
+put iyogfmoi.0
+get pass iyogfmoi.0
+del iyogfmoi.0
 */
 ```
 ### ASYNC methods example
@@ -78,9 +78,9 @@ db.put('auth', 'user', 'pass', (e, uid) => {
 });
 /** console.log:
 ---
-put undefined iyn4swkp.1
-get undefined pass iyn4swkp.1
-del undefined iyn4swkp.1
+put undefined iyogfmol.1
+get undefined pass iyogfmol.1
+del undefined iyogfmol.1
 */
 ```
 ### Stream example
@@ -88,14 +88,14 @@ del undefined iyn4swkp.1
 const client = db.client();
 client.pipe(db.server()).pipe(client);
 // dir = 'auth', key = 'user', value = 'pass'
-client.put('auth', 'user', 'pass', h => {
-    console.log('put', h);
-    if (!h.error && h.uid) {
-        client.get('auth', 'user', (h, b) => {
-            console.log('get', h, b.toString());
-            if (!h.error && h.uid) {
-                client.del('auth', 'user', h => {
-                    console.log('del', h);
+client.put('auth', 'user', 'pass', (e, uid) => {
+    console.log('put', e, uid);
+    if (!e && uid) {
+        client.get('auth', 'user', (e, data, uid) => {
+            console.log('get', e, data ? data.toString() : data, uid);
+            if (!e && uid) {
+                client.del('auth', 'user', (e, uid) => {
+                    console.log('del', e, uid);
                 });
             }
         });
@@ -103,9 +103,9 @@ client.put('auth', 'user', 'pass', h => {
 });
 /** console.log:
 ---
-put { uid: 'iyn4swl0.2' }
-get { uid: 'iyn4swl0.2' } pass
-del { uid: 'iyn4swl0.2' }
+put undefined iyogfmou.2
+get undefined pass iyogfmou.2
+del undefined iyogfmou.2
 */
 ```
 ### Socket stream example
@@ -121,27 +121,16 @@ net.createServer(socket => {
     client.server = this; // optional, attach socket.server 'this' to the db.client 'client'
     net.connect(a.port, a.address, function() { // connect to socket.server Port 'a.port' and IP 'a.address'
         this.pipe(client).pipe(this); // pipe db.client 'client' into socket.client 'this'
-        // call some db.client methods, like in stream example, see above
-        client.put('auth', 'user', 'pass', h => {
-            console.log('put', h);
-            if (!h.error && h.uid) {
-                client.get('auth', 'user', (h, b) => {
-                    console.log('get', h, b.toString());
-                    if (!h.error && h.uid) {
-                        client.del('auth', 'user', h => {
-                            console.log('del', h);
-                            if (!h.error && h.uid) {
-                                client.rmdir('auth', h => { // remove dir 'auth'
-                                    console.log('rmdir', h);
-                                    client.list(h => { // see the current directory list
-                                        console.log('list', h);
-                                        client.push(null); // optional, end stream db.client 'client'
-                                        client.server.close(); // optional, close socket.server 'client.server'
-                                    });
-                                });
-                            }
-                        });
-                    }
+        client.put('auth', 'user', 'pass', (e, uid) => {
+            console.log('put', e, uid);
+            if (!e && uid) {
+                client.rmdir('auth', e => { // remove dir 'auth'
+                    console.log('rmdir', e);
+                    client.list(r => { // see the current directory list
+                        console.log('list', r);
+                        client.push(null); // optional, end stream db.client 'client'
+                        client.server.close(); // optional, close socket.server 'client.server'
+                    });
                 });
             }
         });
@@ -149,10 +138,8 @@ net.createServer(socket => {
 }).once('close', () => console.log('socket.server close'));
 /** console.log:
 ---
-put { uid: 'iyn4swlj.3' }
-get { uid: 'iyn4swlj.3' } pass
-del { uid: 'iyn4swlj.3' }
-rmdir {}
+put undefined iyogfmp8.3
+rmdir undefined
 list {}
 socket.server close
 */
