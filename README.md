@@ -52,12 +52,14 @@ list { auth:
 console.log('put', db.put('auth', 'user', 'pass'));
 const { data, uid } = db.get('auth', 'user');
 console.log('get', data.toString(), uid);
+console.log('keys', db.keys('auth'));
 console.log('del', db.del('auth', 'user'));
 /** console.log:
 ---
-put iyogfmoi.0
-get pass iyogfmoi.0
-del iyogfmoi.0
+put iyowubce.0
+get pass iyowubce.0
+keys { 'iyowubce.0': <Buffer 75 73 65 72> }
+del iyowubce.0
 */
 ```
 ### ASYNC methods example
