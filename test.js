@@ -31,34 +31,51 @@ list { auth:
 console.log('put', db.put('auth', 'user', 'pass'));
 const { data, uid } = db.get('auth', 'user');
 console.log('get', data.toString(), uid);
+console.log('keys', db.keys('auth'));//, { start: 1, end: 3 }
+//db.keys('auth', (e, uid, key) => console.log('key', e, uid, key.toString()));
 console.log('del', db.del('auth', 'user'));
 /** console.log:
 ---
-put iyogfmoi.0
-get pass iyogfmoi.0
-del iyogfmoi.0
+put iyowubce.0
+get pass iyowubce.0
+keys { 'iyowubce.0': <Buffer 75 73 65 72> }
+del iyowubce.0
 */
 
 // TEST ASYNC
-function async(db, cb) {
+function async(db, t, cb) {
     db.put('auth', 'user', 'pass', (e, uid) => {
         console.log('put', e, uid);
         if (!e && uid) {
             db.get('auth', 'user', (e, data, uid) => {
                 console.log('get', e, data ? data.toString() : data, uid);
                 if (!e && uid) {
-                    db.del('auth', 'user', (e, uid) => {
-                        console.log('del', e, uid);
-                        if (!e && uid) {
-                            if (cb) { cb(); } // call next
-                        }
-                    });
+                    if (t) { // is stream, get keys list is safe, server db core sync call
+                        db.keys('auth', (e, keys) => {
+                            console.log('keys', e, keys);
+                            if (!e && keys) {
+                                db.del('auth', 'user', (e, uid) => {
+                                    console.log('del', e, uid);
+                                    if (!e && uid) {
+                                        if (cb) { cb(); } // call next
+                                    }
+                                });
+                            }
+                        });
+                    } else { // is db core, async db.keys() is unsafe here, muliple random call backs
+                        db.del('auth', 'user', (e, uid) => {
+                            console.log('del', e, uid);
+                            if (!e && uid) {
+                                if (cb) { cb(); } // call next
+                            }
+                        });
+                    }
                 }
             });
         }
     });
 }
-async(db, testStream); // core db test
+async(db, false, testStream); // core db test
 /** console.log:
 ---
 put undefined iyogfmol.1
@@ -70,17 +87,18 @@ del undefined iyogfmol.1
 function testStream() {
     const client = db.client();
     client.pipe(db.server()).pipe(client);
-    async(client, testSocket); // stream test
+    async(client, true, testSocket); // stream test
 }
 /** console.log:
 ---
-put undefined iyogfmou.2
-get undefined pass iyogfmou.2
-del undefined iyogfmou.2
+put undefined iyoy94dt.2
+get undefined pass iyoy94dt.2
+keys undefined { 'iyoy94dt.2': { type: 'Buffer', data: [ 117, 115, 101, 114 ] } }
+del undefined iyoy94dt.2
 */
 
 function end() {
-    this.rmdir('auth', e => { // remove dir 'auth'
+    this.rmdir('auth', e => { // remove dir 'auth', is safe, server db core sync call
         console.log('rmdir', e);
         this.list(r => { // see the current directory list
             console.log('list', r);
@@ -102,15 +120,16 @@ function testSocket() {
         client.server = this; // optional, attach socket.server 'this' to the db.client 'client'
         net.connect(a.port, a.address, function() { // connect to socket.server Port 'a.port' and IP 'a.address'
             this.pipe(client).pipe(this); // pipe db.client 'client' into socket.client 'this'
-            async(client, end.bind(client)); // socket stream test
+            async(client, true, end.bind(client)); // socket stream test
         });
     }).once('close', () => console.log('socket.server close'));
 }
 /** console.log:
 ---
-put undefined iyogfmp8.3
-get undefined pass iyogfmp8.3
-del undefined iyogfmp8.3
+put undefined iyoy94ea.3
+get undefined pass iyoy94ea.3
+keys undefined { 'iyoy94ea.3': { type: 'Buffer', data: [ 117, 115, 101, 114 ] } }
+del undefined iyoy94ea.3
 rmdir undefined
 list {}
 socket.server close

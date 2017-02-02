@@ -94,8 +94,13 @@ client.put('auth', 'user', 'pass', (e, uid) => {
         client.get('auth', 'user', (e, data, uid) => {
             console.log('get', e, data ? data.toString() : data, uid);
             if (!e && uid) {
-                client.del('auth', 'user', (e, uid) => {
-                    console.log('del', e, uid);
+                db.keys('auth', (e, keys) => { // get key list of dir 'auth'
+                    console.log('keys', e, keys);
+                    if (!e && keys) {
+                        client.del('auth', 'user', (e, uid) => {
+                            console.log('del', e, uid);
+                        });
+                    }
                 });
             }
         });
@@ -103,9 +108,10 @@ client.put('auth', 'user', 'pass', (e, uid) => {
 });
 /** console.log:
 ---
-put undefined iyogfmou.2
-get undefined pass iyogfmou.2
-del undefined iyogfmou.2
+put undefined iyoy94dt.2
+get undefined pass iyoy94dt.2
+keys undefined { 'iyoy94dt.2': { type: 'Buffer', data: [ 117, 115, 101, 114 ] } }
+del undefined iyoy94dt.2
 */
 ```
 ### Socket stream example
