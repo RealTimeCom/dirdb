@@ -15,9 +15,9 @@ function request(resp, head, body) {
         switch (head.f) {
             case 'mkdir': this.db.mkdir(head.d, head.o, (e, dir) => resp({ error: e ? e.message : e, dir: dir })); break;
             case 'rmdir': this.db.rmdir(head.d, e => resp({ error: e ? e.message : e })); break;
-            case 'put':   this.db.put(head.d, body.slice(0, head.k), body.slice(head.k), (e, uuid) => resp({ error: e ? e.message : e, uuid: uuid })); break;
-            case 'get':   this.db.get(head.d, body, (e, data, uuid) => resp({ error: e ? e.message : e, uuid: uuid }, data)); break;
-            case 'del':   this.db.del(head.d, body, (e, uuid) => resp({ error: e ? e.message : e, uuid: uuid })); break;
+            case 'put':   this.db.put(head.d, body.slice(0, head.k), body.slice(head.k), (e, uid) => resp({ error: e ? e.message : e, uid: uid })); break;
+            case 'get':   this.db.get(head.d, body, (e, data, uid) => resp({ error: e ? e.message : e, uid: uid }, data)); break;
+            case 'del':   this.db.del(head.d, body, (e, uid) => resp({ error: e ? e.message : e, uid: uid })); break;
             case 'list':  resp(this.db.c); break;
             case 'isdir': resp(this.db.isdir(head.d)); break;
             default: resp({ error: 'function "' + head.f + '" not found' });
@@ -178,9 +178,9 @@ function find(d, a, key, cb, r) {
         } else { find(d, a.splice(0, 1) ? a : a, key, cb, r); }
     } else { cb(); }
 }
-dirdb.prototype.uuid = function() {
+dirdb.prototype.uid = function() {
     if (this.i === 1e9) { this.i = 0; } // max id, reset
-    return new Date().getTime().toString(36) + '.' + (this.i++).toString(36); // parseInt(uuid.split('.')[0], 36) - birthtime
+    return new Date().getTime().toString(36) + '.' + (this.i++).toString(36); // parseInt(uid.split('.')[0], 36) - birthtime
 };
 dirdb.prototype.put = function(dir, key, val, cb) {
     if (typeof cb === 'function') { // async
@@ -195,13 +195,13 @@ dirdb.prototype.put = function(dir, key, val, cb) {
                             if (e) { cb(e); } else {
                                 find(d, a, key, e => { // verify if key exists
                                     if (e) { cb(e); } else {
-                                        const uuid = this.uuid();
+                                        const uid = this.uid();
                                         compress(toBuffer(val), this.c[dir].compress, (e, b) => {
                                             if (e) { cb(e); } else {
-                                                fs.writeFile(d + path.sep + uuid + '.v', b, { mode: this.c[dir].fmode }, e => {
+                                                fs.writeFile(d + path.sep + uid + '.v', b, { mode: this.c[dir].fmode }, e => {
                                                     if (e) { cb(e); } else {
-                                                        fs.writeFile(d + path.sep + uuid + '.k', key, { mode: this.c[dir].fmode }, e => {
-                                                            if (e) { cb(e); } else { cb(undefined, uuid); }
+                                                        fs.writeFile(d + path.sep + uid + '.k', key, { mode: this.c[dir].fmode }, e => {
+                                                            if (e) { cb(e); } else { cb(undefined, uid); }
                                                         });
                                                     }
                                                 });
@@ -229,10 +229,10 @@ dirdb.prototype.put = function(dir, key, val, cb) {
                 if (s.isFile() && s.size === key.length && key.compare(fs.readFileSync(d + path.sep + v)) === 0) { throw new Error('key exists'); }
             }
         }
-        const uuid = this.uuid();
-        fs.writeFileSync(d + path.sep + uuid + '.v', compress(toBuffer(val), this.c[dir].compress), { mode: this.c[dir].fmode });
-        fs.writeFileSync(d + path.sep + uuid + '.k', key, { mode: this.c[dir].fmode });
-        return uuid;
+        const uid = this.uid();
+        fs.writeFileSync(d + path.sep + uid + '.v', compress(toBuffer(val), this.c[dir].compress), { mode: this.c[dir].fmode });
+        fs.writeFileSync(d + path.sep + uid + '.k', key, { mode: this.c[dir].fmode });
+        return uid;
     }
 };
 dirdb.prototype.get = function(dir, key, cb) {
@@ -243,13 +243,13 @@ dirdb.prototype.get = function(dir, key, cb) {
                 const d = this.d + path.sep + dir + path.sep + xpath(hash(key, this.c[dir].algorithm, this.c[dir].digest), this.c[dir].level);
                 fs.readdir(d, (e, a) => {
                     if (e) { cb(e); } else {
-                        find(d, a, key, (e, uuid) => { // verify if key exists
+                        find(d, a, key, (e, uid) => { // verify if key exists
                             if (e) {
-                                if (e.message === 'key exists' && uuid) {
-                                    fs.readFile(d + path.sep + uuid + '.v', (e, data) => {
+                                if (e.message === 'key exists' && uid) {
+                                    fs.readFile(d + path.sep + uid + '.v', (e, data) => {
                                         if (e) { cb(e); } else {
                                             uncompress(data, this.c[dir].compress, (e, b) => {
-                                                if (e) { cb(e); } else { cb(undefined, b, uuid); }
+                                                if (e) { cb(e); } else { cb(undefined, b, uid); }
                                             });
                                         }
                                     });
@@ -271,7 +271,7 @@ dirdb.prototype.get = function(dir, key, cb) {
             if (x.ext === '.k') {
                 s = fs.lstatSync(d + path.sep + v);
                 if (s.isFile() && s.size === key.length && key.compare(fs.readFileSync(d + path.sep + v)) === 0) {
-                    return { data: uncompress(fs.readFileSync(d + path.sep + x.name + '.v'), this.c[dir].compress), uuid: x.name };
+                    return { data: uncompress(fs.readFileSync(d + path.sep + x.name + '.v'), this.c[dir].compress), uid: x.name };
                 }
             }
         }
@@ -286,14 +286,14 @@ dirdb.prototype.del = function(dir, key, cb) {
                 const d = this.d + path.sep + dir + path.sep + xpath(hash(key, this.c[dir].algorithm, this.c[dir].digest), this.c[dir].level);
                 fs.readdir(d, (e, a) => {
                     if (e) { cb(e); } else {
-                        find(d, a, key, (e, uuid) => { // verify if key exists
+                        find(d, a, key, (e, uid) => { // verify if key exists
                             if (e) {
-                                if (e.message === 'key exists' && uuid) {
-                                    fs.unlink(d + path.sep + uuid + '.k', e => {
+                                if (e.message === 'key exists' && uid) {
+                                    fs.unlink(d + path.sep + uid + '.k', e => {
                                         if (e) { cb(e); } else {
-                                            fs.unlink(d + path.sep + uuid + '.v', e => {
+                                            fs.unlink(d + path.sep + uid + '.v', e => {
                                                 if (e) { cb(e); } else { // run GC, delete last dir
-                                                    if (this.c[dir].gc) { fs.rmdir(d, e => cb(undefined, uuid)); } else { cb(undefined, uuid); }
+                                                    if (this.c[dir].gc) { fs.rmdir(d, e => cb(undefined, uid)); } else { cb(undefined, uid); }
                                                 }
                                             });
                                         }

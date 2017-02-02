@@ -1,4 +1,4 @@
-## DirDB
+## DirDB - lightning fast database
 [![NPM](https://nodei.co/npm/dirdb.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/dirdb/)
 
 [![Build Status](https://travis-ci.org/RealTimeCom/dirdb.svg?branch=master)](http://travis-ci.org/RealTimeCom/dirdb)
@@ -48,8 +48,8 @@ list { auth:
 ```js
 // dir = 'auth', key = 'user', value = 'pass'
 console.log('put', db.put('auth', 'user', 'pass'));
-const { data, uuid } = db.get('auth', 'user');
-console.log('get', data.toString(), uuid);
+const { data, uid } = db.get('auth', 'user');
+console.log('get', data.toString(), uid);
 console.log('del', db.del('auth', 'user'));
 /** console.log:
 ---
@@ -61,14 +61,14 @@ del iyn4swkl.0
 ### ASYNC methods example
 ```js
 // dir = 'auth', key = 'user', value = 'pass'
-db.put('auth', 'user', 'pass', (e, uuid) => {
-    console.log('put', e, uuid);
-    if (!e && uuid) {
-        db.get('auth', 'user', (e, data, uuid) => {
-            console.log('get', e, data ? data.toString() : data, uuid);
-            if (!e && uuid) {
-                db.del('auth', 'user', (e, uuid) => {
-                    console.log('del', e, uuid);
+db.put('auth', 'user', 'pass', (e, uid) => {
+    console.log('put', e, uid);
+    if (!e && uid) {
+        db.get('auth', 'user', (e, data, uid) => {
+            console.log('get', e, data ? data.toString() : data, uid);
+            if (!e && uid) {
+                db.del('auth', 'user', (e, uid) => {
+                    console.log('del', e, uid);
                 });
             }
         });
@@ -88,10 +88,10 @@ client.pipe(db.server()).pipe(client);
 // dir = 'auth', key = 'user', value = 'pass'
 client.put('auth', 'user', 'pass', h => {
     console.log('put', h);
-    if (!h.error && h.uuid) {
+    if (!h.error && h.uid) {
         client.get('auth', 'user', (h, b) => {
             console.log('get', h, b.toString());
-            if (!h.error && h.uuid) {
+            if (!h.error && h.uid) {
                 client.del('auth', 'user', h => {
                     console.log('del', h);
                 });
@@ -101,9 +101,9 @@ client.put('auth', 'user', 'pass', h => {
 });
 /** console.log:
 ---
-put { uuid: 'iyn4swl0.2' }
-get { uuid: 'iyn4swl0.2' } pass
-del { uuid: 'iyn4swl0.2' }
+put { uid: 'iyn4swl0.2' }
+get { uid: 'iyn4swl0.2' } pass
+del { uid: 'iyn4swl0.2' }
 */
 ```
 ### Socket stream example
@@ -122,13 +122,13 @@ net.createServer(socket => {
         // call some db.client methods, like in stream example, see above
         client.put('auth', 'user', 'pass', h => {
             console.log('put', h);
-            if (!h.error && h.uuid) {
+            if (!h.error && h.uid) {
                 client.get('auth', 'user', (h, b) => {
                     console.log('get', h, b.toString());
-                    if (!h.error && h.uuid) {
+                    if (!h.error && h.uid) {
                         client.del('auth', 'user', h => {
                             console.log('del', h);
-                            if (!h.error && h.uuid) {
+                            if (!h.error && h.uid) {
                                 client.rmdir('auth', h => { // remove dir 'auth'
                                     console.log('rmdir', h);
                                     client.list(h => { // see the current directory list
@@ -147,9 +147,9 @@ net.createServer(socket => {
 }).once('close', () => console.log('socket.server close'));
 /** console.log:
 ---
-put { uuid: 'iyn4swlj.3' }
-get { uuid: 'iyn4swlj.3' } pass
-del { uuid: 'iyn4swlj.3' }
+put { uid: 'iyn4swlj.3' }
+get { uid: 'iyn4swlj.3' } pass
+del { uid: 'iyn4swlj.3' }
 rmdir {}
 list {}
 socket.server close
