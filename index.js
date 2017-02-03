@@ -15,15 +15,23 @@ function request(resp, head, body) {
             case 'mkdir': this.db.mkdir(head.d, head.o, (e, dir) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : dir })); break;
             case 'keys':
                 try { // sync, for safety
-                    const r = this.db.keys(head.d, head.o);
-                    resp({ f: head.f, e: undefined, r: r });
+                    resp({ f: head.f, e: undefined, r: this.db.keys(head.d, head.o) });
                 } catch (e) {
                     resp({ f: head.f, e: e.message, r: undefined });
                 }
                 break;
-            case 'put':   this.db.put(head.d, body.slice(0, head.k), body.slice(head.k), (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid })); break;
-            case 'del':   this.db.del(head.d, body, (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid })); break;
-            case 'get':   this.db.get(head.d, body, (e, data, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid }, data)); break;
+            case 'put': this.db.put(head.d, body.slice(0, head.k), body.slice(head.k), (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid })); break;
+            case 'del': this.db.del(head.d, body, (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid })); break;
+            case 'get': this.db.get(head.d, body, (e, data, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid }, data)); break;
+            case 'val':
+                this.db.val(head.d, head.u, head.h, (e, key, data) => {
+                    if (e) {
+                        resp({ f: head.f, e: e.message });
+                    } else {
+                        resp({ f: head.f, e: undefined, k: key.length }, Buffer.concat([key, data]));
+                    }
+                });
+                break;
             case 'rmdir':
                 try { // sync, for safety
                     this.db.rmdir(head.d);
@@ -47,6 +55,11 @@ function filter(resp, head, body) {
                 case 'put':
                 case 'del':   resp(head.e, head.r); break;
                 case 'get':   resp(head.e, body, head.r); break;
+                case 'val':
+                    if (head.e) { resp(head.e); } else {
+                         resp(head.e, body.slice(0, head.k), body.slice(head.k));
+                    }
+                    break;
                 case 'rmdir': resp(head.e); break;
                 case 'list':
                 case 'isdir': resp(head.r); break;
@@ -91,6 +104,10 @@ client.prototype.isdir = function(dir, resp) {
 client.prototype.keys = function(dir, opt, resp) {
     if (typeof opt === 'function' && resp === undefined) { resp = opt; }
     this.exec(resp, { f: 'keys', d: dir, o: opt });
+    return this;
+};
+client.prototype.val = function(dir, uid, hash, resp) {
+    this.exec(resp, { f: 'val', d: dir, u: uid, h: hash });
     return this;
 };
 
@@ -381,7 +398,7 @@ dirdb.prototype.del = function(dir, key, cb) {
     }
 };
 
-function scan(r, d, l, opt, k, cb) {
+function scan(r, d, l, n, opt, k, cb) {
     if (typeof cb === 'function') { // async
         if (!k.break) {
             fs.readdir(d, (e, a) => {
@@ -391,11 +408,11 @@ function scan(r, d, l, opt, k, cb) {
                             fs.lstat(d + path.sep + v, (e, s) => {
                                 if (e) { k.break = true; cb(e); } else {
                                     if (s.isDirectory()) {
-                                        scan(r, d + path.sep + v, l, opt, k, cb);
-                                    } else if (s.isFile() && d.length === l) {
+                                        scan(r, d + path.sep + v, l, n, opt, k, cb);
+                                    } else if (s.isFile() && d.length === l + n) {
                                         const x = path.parse(v);
                                         if (x.ext === '.k') {
-                                            fs.readFile(d + path.sep + v, (e, b) => { if (e) { k.break = true; cb(e); } else { cb(undefined, x.name, b); } });
+                                            cb(undefined, x.name, d.substr(l).split(path.sep).join(''));
                                         }
                                     }
                                 }
@@ -412,13 +429,13 @@ function scan(r, d, l, opt, k, cb) {
                 if (k.count < opt.end) {
                     s = fs.lstatSync(d + path.sep + v);
                     if (s.isDirectory()) {
-                        scan(r, d + path.sep + v, l, opt, k);
-                    } else if (s.isFile() && d.length === l) {
+                        scan(r, d + path.sep + v, l, n, opt, k);
+                    } else if (s.isFile() && d.length === l + n) {
                         x = path.parse(v);
                         if (x.ext === '.k') {
                             if (opt && typeof opt.start === 'number') { // start point
-                                if (k.count >= opt.start) { r[x.name] = fs.readFileSync(d + path.sep + v); }
-                            } else { r[x.name] = fs.readFileSync(d + path.sep + v); } // no start
+                                if (k.count >= opt.start) { r[x.name] = d.substr(l).split(path.sep).join(''); }
+                            } else { r[x.name] = d.substr(l).split(path.sep).join(''); } // no start
                             k.count++;
                         }
                     }
@@ -426,13 +443,13 @@ function scan(r, d, l, opt, k, cb) {
             } else { // no end
                 s = fs.lstatSync(d + path.sep + v);
                 if (s.isDirectory()) {
-                    scan(r, d + path.sep + v, l, opt, k);
-                } else if (s.isFile() && d.length === l) {
+                    scan(r, d + path.sep + v, l, n, opt, k);
+                } else if (s.isFile() && d.length === l + n) {
                     x = path.parse(v);
                     if (x.ext === '.k') {
                         if (opt && typeof opt.start === 'number') { // start point
-                            if (k.count >= opt.start) { r[x.name] = fs.readFileSync(d + path.sep + v); }
-                        } else { r[x.name] = fs.readFileSync(d + path.sep + v); } // no start
+                            if (k.count >= opt.start) { r[x.name] = d.substr(l).split(path.sep).join(''); }
+                        } else { r[x.name] = d.substr(l).split(path.sep).join(''); } // no start
                         k.count++;
                     }
                 }
@@ -444,16 +461,46 @@ dirdb.prototype.keys = function(dir, opt, cb) {
     if (typeof opt === 'function' && cb === undefined) { cb = opt; }
     if (typeof cb === 'function') { // async, range is disabled
         if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
-            const l = (this.d + path.sep + dir + path.sep).length + divisor(this.c[dir]); // total dir length
+            const l = (this.d + path.sep + dir + path.sep).length, n = divisor(this.c[dir]); // total dir length
             let k = { break: false };
-            scan(undefined, this.d + path.sep + dir, l, undefined, k, cb);
+            scan(undefined, this.d + path.sep + dir, l, n, undefined, k, cb);
         }
     } else { // sync
         if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
-        const l = (this.d + path.sep + dir + path.sep).length + divisor(this.c[dir]); // total dir length
+        const l = (this.d + path.sep + dir + path.sep).length, n = divisor(this.c[dir]); // total dir length
         let r = {}, k = { count: 0 }; // init return object and number of keys
-        scan(r, this.d + path.sep + dir, l, range(opt), k);
+        scan(r, this.d + path.sep + dir, l, n, range(opt), k);
         return r;
+    }
+};
+dirdb.prototype.val = function(dir, uid, hash, cb) {
+    if (typeof cb === 'function') { // async
+        if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
+            if (!(typeof uid === 'string' && uid.split('.').length === 2)) { cb(new Error('invalid uid "' + uid + '"')); } else {
+                const l = hash.length;
+                if (!(typeof hash === 'string' && l >= 22 && l <= 128)) { cb(new Error('invalid hash "' + hash + '"')); } else {
+                    const f = this.d + path.sep + dir + path.sep + xpath(hash, this.c[dir].level) + path.sep + uid;
+                    fs.readFile(f + '.k', (e, key) => {
+                        if (e) { cb(e); } else {
+                            fs.readFile(f + '.v', (e, v) => {
+                                if (e) { cb(e); } else {
+                                    uncompress(v, this.c[dir].compress, (e, data) => {
+                                        if (e) { cb(e); } else { cb(undefined, key, data); }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        }
+    } else { // sync
+        if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
+        if (!(typeof uid === 'string' && uid.split('.').length === 2)) { throw new Error('invalid uid "' + uid + '"'); }
+        const l = hash.length;
+        if (!(typeof hash === 'string' && l >= 22 && l <= 128)) { throw new Error('invalid hash "' + hash + '"'); }
+        const f = this.d + path.sep + dir + path.sep + xpath(hash, this.c[dir].level) + path.sep + uid;
+        return { key: fs.readFileSync(f + '.k'), data: uncompress(fs.readFileSync(f + '.v'), this.c[dir].compress) };
     }
 };
 

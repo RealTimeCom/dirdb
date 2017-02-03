@@ -52,14 +52,20 @@ list { auth:
 console.log('put', db.put('auth', 'user', 'pass'));
 const { data, uid } = db.get('auth', 'user');
 console.log('get', data.toString(), uid);
-console.log('keys', db.keys('auth'));
+const keys = db.keys('auth');
+console.log('keys', keys);
+for (let uid of Object.keys(keys)) { // read each key
+    const { key, data } = db.val('auth', uid, keys[uid]);
+    console.log('val', key.toString(), data.toString());
+}
 console.log('del', db.del('auth', 'user'));
 /** console.log:
 ---
-put iyowubce.0
-get pass iyowubce.0
-keys { 'iyowubce.0': <Buffer 75 73 65 72> }
-del iyowubce.0
+put iyppkyvj.0
+get pass iyppkyvj.0
+keys { 'iyppkyvj.0': '7hHLsZBS5AsHqsDKBgwj7g' }
+val user pass
+del iyppkyvj.0
 */
 ```
 ### ASYNC methods example
@@ -80,9 +86,9 @@ db.put('auth', 'user', 'pass', (e, uid) => {
 });
 /** console.log:
 ---
-put undefined iyogfmol.1
-get undefined pass iyogfmol.1
-del undefined iyogfmol.1
+put undefined iyppkyvo.1
+get undefined pass iyppkyvo.1
+del undefined iyppkyvo.1
 */
 ```
 ### Stream example
@@ -99,8 +105,14 @@ client.put('auth', 'user', 'pass', (e, uid) => {
                 db.keys('auth', (e, keys) => { // get key list of dir 'auth'
                     console.log('keys', e, keys);
                     if (!e && keys) {
-                        client.del('auth', 'user', (e, uid) => {
-                            console.log('del', e, uid);
+                        const uid = Object.keys(keys)[0]; // read first key from the list
+                        db.val('auth', uid, keys[uid], (e, key, data) => {
+                            console.log('val', key.toString(), data.toString());
+                            if (!e) {
+                                client.del('auth', 'user', (e, uid) => {
+                                    console.log('del', e, uid);
+                                });
+                            }
                         });
                     }
                 });
@@ -110,10 +122,11 @@ client.put('auth', 'user', 'pass', (e, uid) => {
 });
 /** console.log:
 ---
-put undefined iyoy94dt.2
-get undefined pass iyoy94dt.2
-keys undefined { 'iyoy94dt.2': { type: 'Buffer', data: [ 117, 115, 101, 114 ] } }
-del undefined iyoy94dt.2
+put undefined iyppkyvw.2
+get undefined pass iyppkyvw.2
+keys undefined { 'iyppkyvw.2': '7hHLsZBS5AsHqsDKBgwj7g' }
+val user pass
+del undefined iyppkyvw.2
 */
 ```
 ### Socket stream example
@@ -146,7 +159,7 @@ net.createServer(socket => {
 }).once('close', () => console.log('socket.server close'));
 /** console.log:
 ---
-put undefined iyogfmp8.3
+put undefined iyppkywb.3
 rmdir undefined
 list {}
 socket.server close
