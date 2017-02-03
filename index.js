@@ -20,15 +20,17 @@ function request(resp, head, body) {
                     resp({ f: head.f, e: e.message, r: undefined });
                 }
                 break;
-            case 'put': this.db.put(head.d, body.slice(0, head.k), body.slice(head.k), (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid })); break;
+            case 'put':
+            case 'set':
+            case 'add': this.db[head.f](head.d, body.slice(0, head.k), body.slice(head.k), (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid })); break;
             case 'del': this.db.del(head.d, body, (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid })); break;
-            case 'get': this.db.get(head.d, body, (e, data, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid }, data)); break;
+            case 'get': this.db.get(head.d, body, (e, value, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid }, value)); break;
             case 'val':
-                this.db.val(head.d, head.u, head.h, (e, key, data) => {
+                this.db.val(head.d, head.u, head.h, (e, key, value) => {
                     if (e) {
                         resp({ f: head.f, e: e.message });
                     } else {
-                        resp({ f: head.f, e: undefined, k: key.length }, Buffer.concat([key, data]));
+                        resp({ f: head.f, e: undefined, k: key.length }, Buffer.concat([key, value]));
                     }
                 });
                 break;
@@ -53,8 +55,10 @@ function filter(resp, head, body) {
                 case 'mkdir':
                 case 'keys':
                 case 'put':
-                case 'del':   resp(head.e, head.r); break;
-                case 'get':   resp(head.e, body, head.r); break;
+                case 'set':
+                case 'add':
+                case 'del': resp(head.e, head.r); break;
+                case 'get': resp(head.e, body, head.r); break;
                 case 'val':
                     if (head.e) { resp(head.e); } else {
                          resp(head.e, body.slice(0, head.k), body.slice(head.k));
@@ -83,6 +87,16 @@ client.prototype.rmdir = function(dir, resp) {
 client.prototype.put = function(dir, key, val, resp) {
     key = toBuffer(key);
     this.exec(resp, { f: 'put', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
+    return this;
+};
+client.prototype.set = function(dir, key, val, resp) {
+    key = toBuffer(key);
+    this.exec(resp, { f: 'set', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
+    return this;
+};
+client.prototype.add = function(dir, key, val, resp) {
+    key = toBuffer(key);
+    this.exec(resp, { f: 'add', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
     return this;
 };
 client.prototype.get = function(dir, key, resp) {
@@ -203,6 +217,7 @@ dirdb.prototype.mkdir = function(dir, opt, cb) { // don't use slashes \ / or dot
                 });
             }
         }
+        return this;
     } else { // sync
         if (!(dir = safeDir(dir))) { throw new Error('invalid dir value'); }
         if (dir in this.c) { throw new Error('dir "' + dir + '" exists'); }
@@ -223,6 +238,7 @@ dirdb.prototype.rmdir = function(dir, cb) {
                 }
             });
         }
+        return this;
     } else { // sync
         if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
         rmdir(this.d + path.sep + dir);
@@ -286,6 +302,7 @@ dirdb.prototype.put = function(dir, key, val, cb) {
                 });
             }
         }
+        return this;
     } else { // sync
         if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
         key = toBuffer(key);
@@ -306,6 +323,149 @@ dirdb.prototype.put = function(dir, key, val, cb) {
         return uid;
     }
 };
+dirdb.prototype.set = function(dir, key, val, cb) {
+    if (typeof cb === 'function') { // async
+        if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
+            key = toBuffer(key);
+            if (key.length === 0) { cb(new Error('empty key')); } else {
+                const p = xpath(hash(key, this.c[dir].algorithm, this.c[dir].digest), this.c[dir].level);
+                make(this.d + path.sep + dir, p, this.c[dir].dmode, e => {
+                    if (e) { cb(e); } else {
+                        const d = this.d + path.sep + dir + path.sep + p;
+                        fs.readdir(d, (e, a) => {
+                            if (e) { cb(e); } else {
+                                find(d, a, key, (e, uid) => { // verify if key exists
+                                    if (e) {
+                                        if (e.message === 'key exists' && uid) { // key found
+                                            compress(toBuffer(val), this.c[dir].compress, (e, b) => {
+                                                if (e) { cb(e); } else {
+                                                    fs.writeFile(d + path.sep + uid + '.v', b, { mode: this.c[dir].fmode }, e => {
+                                                        if (e) { cb(e); } else { cb(undefined, uid); }
+                                                    });
+                                                }
+                                            });
+                                        } else { cb(e); }
+                                    } else { // key not found
+                                        uid = this.uid();
+                                        compress(toBuffer(val), this.c[dir].compress, (e, b) => {
+                                            if (e) { cb(e); } else {
+                                                fs.writeFile(d + path.sep + uid + '.v', b, { mode: this.c[dir].fmode }, e => {
+                                                    if (e) { cb(e); } else {
+                                                        fs.writeFile(d + path.sep + uid + '.k', key, { mode: this.c[dir].fmode }, e => {
+                                                            if (e) { cb(e); } else { cb(undefined, uid); }
+                                                        });
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                }, true);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+        return this;
+    } else { // sync
+        if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
+        key = toBuffer(key);
+        if (key.length === 0) { throw new Error('empty key'); }
+        const p = xpath(hash(key, this.c[dir].algorithm, this.c[dir].digest), this.c[dir].level);
+        make(this.d + path.sep + dir, p, this.c[dir].dmode);
+        const d = this.d + path.sep + dir + path.sep + p;
+        let s, x, k = false;
+        for (let v of fs.readdirSync(d)) { // verify if key exists
+            x = path.parse(v);
+            if (x.ext === '.k') {
+                s = fs.lstatSync(d + path.sep + v);
+                if (s.isFile() && s.size === key.length && key.compare(fs.readFileSync(d + path.sep + v)) === 0) { k = true; break; }
+            }
+        }
+        if (k) { // key found
+            fs.writeFileSync(d + path.sep + x.name + '.v', compress(toBuffer(val), this.c[dir].compress), { mode: this.c[dir].fmode });
+            return x.name;
+        } else { // key not found
+            const uid = this.uid();
+            fs.writeFileSync(d + path.sep + uid + '.v', compress(toBuffer(val), this.c[dir].compress), { mode: this.c[dir].fmode });
+            fs.writeFileSync(d + path.sep + uid + '.k', key, { mode: this.c[dir].fmode });
+            return uid;
+        }
+    }
+};
+dirdb.prototype.add = function(dir, key, val, cb) {
+    if (typeof cb === 'function') { // async
+        if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
+            //if (this.c[dir].compress !== 'none') { cb(new Error('compress "' + this.c[dir].compress + '" enabled on dir "' + dir + '"')); } else {
+                key = toBuffer(key);
+                if (key.length === 0) { cb(new Error('empty key')); } else {
+                    const p = xpath(hash(key, this.c[dir].algorithm, this.c[dir].digest), this.c[dir].level);
+                    make(this.d + path.sep + dir, p, this.c[dir].dmode, e => {
+                        if (e) { cb(e); } else {
+                            const d = this.d + path.sep + dir + path.sep + p;
+                            fs.readdir(d, (e, a) => {
+                                if (e) { cb(e); } else {
+                                    find(d, a, key, (e, uid) => { // verify if key exists
+                                        if (e) {
+                                            if (e.message === 'key exists' && uid) { // key found
+                                                compress(toBuffer(val), this.c[dir].compress, (e, b) => {
+                                                    if (e) { cb(e); } else {
+                                                        fs.appendFile(d + path.sep + uid + '.v', b, { mode: this.c[dir].fmode }, e => {
+                                                            if (e) { cb(e); } else { cb(undefined, uid); }
+                                                        });
+                                                    }
+                                                });
+                                            } else { cb(e); }
+                                        } else { // key not found
+                                            uid = this.uid();
+                                            compress(toBuffer(val), this.c[dir].compress, (e, b) => {
+                                                if (e) { cb(e); } else {
+                                                    fs.writeFile(d + path.sep + uid + '.v', b, { mode: this.c[dir].fmode }, e => {
+                                                        if (e) { cb(e); } else {
+                                                            fs.writeFile(d + path.sep + uid + '.k', key, { mode: this.c[dir].fmode }, e => {
+                                                                if (e) { cb(e); } else { cb(undefined, uid); }
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    }, true);
+                                }
+                            });
+                        }
+                    });
+                }
+            //}
+        }
+        return this;
+    } else { // sync
+        if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
+        //if (this.c[dir].compress !== 'none') { throw new Error('compress "' + this.c[dir].compress + '" enabled on dir "' + dir + '"'); }
+        key = toBuffer(key);
+        if (key.length === 0) { throw new Error('empty key'); }
+        const p = xpath(hash(key, this.c[dir].algorithm, this.c[dir].digest), this.c[dir].level);
+        make(this.d + path.sep + dir, p, this.c[dir].dmode);
+        const d = this.d + path.sep + dir + path.sep + p;
+        let s, x, k = false;
+        for (let v of fs.readdirSync(d)) { // verify if key exists
+            x = path.parse(v);
+            if (x.ext === '.k') {
+                s = fs.lstatSync(d + path.sep + v);
+                if (s.isFile() && s.size === key.length && key.compare(fs.readFileSync(d + path.sep + v)) === 0) { k = true; break; }
+            }
+        }
+        if (k) { // key found
+            fs.appendFileSync(d + path.sep + x.name + '.v', compress(toBuffer(val), this.c[dir].compress), { mode: this.c[dir].fmode });
+            return x.name;
+        } else { // key not found
+            const uid = this.uid();
+            fs.writeFileSync(d + path.sep + uid + '.v', compress(toBuffer(val), this.c[dir].compress), { mode: this.c[dir].fmode });
+            fs.writeFileSync(d + path.sep + uid + '.k', key, { mode: this.c[dir].fmode });
+            return uid;
+        }
+    }
+};
 dirdb.prototype.get = function(dir, key, cb) {
     if (typeof cb === 'function') { // async
         if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
@@ -317,9 +477,9 @@ dirdb.prototype.get = function(dir, key, cb) {
                         find(d, a, key, (e, uid) => { // verify if key exists
                             if (e) {
                                 if (e.message === 'key exists' && uid) {
-                                    fs.readFile(d + path.sep + uid + '.v', (e, data) => {
+                                    fs.readFile(d + path.sep + uid + '.v', (e, value) => {
                                         if (e) { cb(e); } else {
-                                            uncompress(data, this.c[dir].compress, (e, b) => {
+                                            uncompress(value, this.c[dir].compress, (e, b) => {
                                                 if (e) { cb(e); } else { cb(undefined, b, uid); }
                                             });
                                         }
@@ -331,6 +491,7 @@ dirdb.prototype.get = function(dir, key, cb) {
                 });
             }
         }
+        return this;
     } else { // sync
         if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
         key = toBuffer(key);
@@ -342,7 +503,7 @@ dirdb.prototype.get = function(dir, key, cb) {
             if (x.ext === '.k') {
                 s = fs.lstatSync(d + path.sep + v);
                 if (s.isFile() && s.size === key.length && key.compare(fs.readFileSync(d + path.sep + v)) === 0) {
-                    return { data: uncompress(fs.readFileSync(d + path.sep + x.name + '.v'), this.c[dir].compress), uid: x.name };
+                    return { value: uncompress(fs.readFileSync(d + path.sep + x.name + '.v'), this.c[dir].compress), uid: x.name };
                 }
             }
         }
@@ -376,6 +537,7 @@ dirdb.prototype.del = function(dir, key, cb) {
                 });
             }
         }
+        return this;
     } else { // sync
         if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
         key = toBuffer(key);
@@ -465,6 +627,7 @@ dirdb.prototype.keys = function(dir, opt, cb) {
             let k = { break: false };
             scan(undefined, this.d + path.sep + dir, l, n, undefined, k, cb);
         }
+        return this;
     } else { // sync
         if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
         const l = (this.d + path.sep + dir + path.sep).length, n = divisor(this.c[dir]); // total dir length
@@ -484,8 +647,8 @@ dirdb.prototype.val = function(dir, uid, hash, cb) {
                         if (e) { cb(e); } else {
                             fs.readFile(f + '.v', (e, v) => {
                                 if (e) { cb(e); } else {
-                                    uncompress(v, this.c[dir].compress, (e, data) => {
-                                        if (e) { cb(e); } else { cb(undefined, key, data); }
+                                    uncompress(v, this.c[dir].compress, (e, value) => {
+                                        if (e) { cb(e); } else { cb(undefined, key, value); }
                                     });
                                 }
                             });
@@ -494,13 +657,14 @@ dirdb.prototype.val = function(dir, uid, hash, cb) {
                 }
             }
         }
+        return this;
     } else { // sync
         if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
         if (!(typeof uid === 'string' && uid.split('.').length === 2)) { throw new Error('invalid uid "' + uid + '"'); }
         const l = hash.length;
         if (!(typeof hash === 'string' && l >= 22 && l <= 128)) { throw new Error('invalid hash "' + hash + '"'); }
         const f = this.d + path.sep + dir + path.sep + xpath(hash, this.c[dir].level) + path.sep + uid;
-        return { key: fs.readFileSync(f + '.k'), data: uncompress(fs.readFileSync(f + '.v'), this.c[dir].compress) };
+        return { key: fs.readFileSync(f + '.k'), value: uncompress(fs.readFileSync(f + '.v'), this.c[dir].compress) };
     }
 };
 
@@ -593,40 +757,40 @@ function range(opt) {
     }
     return r;
 }
-function compress(data, type, cb) {
+function compress(value, type, cb) {
     if (typeof cb === 'function') { // async
         switch (type) {
-            case 'deflate': zlib.deflate(data, (e, b) => cb(e, b)); break;
-            case 'gzip':    zlib.gzip(data, (e, b) => cb(e, b)); break;
-            // case 'snappy':  snappy.compress(data, (e, b) => cb(e, b)); break;
-            case 'none':    cb(undefined, data); break;
+            case 'deflate': zlib.deflate(value, (e, b) => cb(e, b)); break;
+            case 'gzip':    zlib.gzip(value, (e, b) => cb(e, b)); break;
+            // case 'snappy':  snappy.compress(value, (e, b) => cb(e, b)); break;
+            case 'none':    cb(undefined, value); break;
             default: cb(new Error('invalid compress type'));
         }
     } else { // sync
         switch (type) {
-            case 'deflate': return zlib.deflateSync(data);
-            case 'gzip':    return zlib.gzipSync(data);
-            // case 'snappy':  return snappy.compressSync(data);
-            case 'none':    return data;
+            case 'deflate': return zlib.deflateSync(value);
+            case 'gzip':    return zlib.gzipSync(value);
+            // case 'snappy':  return snappy.compressSync(value);
+            case 'none':    return value;
             default: throw new Error('invalid compress type');
         }
     }
 }
-function uncompress(data, type, cb) {
+function uncompress(value, type, cb) {
     if (typeof cb === 'function') { // async
         switch (type) {
-            case 'deflate': zlib.inflate(data, (e, b) => cb(e, b)); break;
-            case 'gzip':    zlib.gunzip(data, (e, b) => cb(e, b)); break;
-            // case 'snappy':  snappy.uncompress(data, (e, b) => cb(e, b)); break;
-            case 'none':    cb(undefined, data); break;
+            case 'deflate': zlib.inflate(value, (e, b) => cb(e, b)); break;
+            case 'gzip':    zlib.gunzip(value, (e, b) => cb(e, b)); break;
+            // case 'snappy':  snappy.uncompress(value, (e, b) => cb(e, b)); break;
+            case 'none':    cb(undefined, value); break;
             default: cb(new Error('invalid uncompress type'));
         }
     } else { // sync
         switch (type) {
-            case 'deflate': return zlib.inflateSync(data);
-            case 'gzip':    return zlib.gunzipSync(data);
-            // case 'snappy':  return snappy.uncompressSync(data);
-            case 'none':    return data;
+            case 'deflate': return zlib.inflateSync(value);
+            case 'gzip':    return zlib.gunzipSync(value);
+            // case 'snappy':  return snappy.uncompressSync(value);
+            case 'none':    return value;
             default: throw new Error('invalid uncompress type');
         }
     }

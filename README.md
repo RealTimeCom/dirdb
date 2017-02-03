@@ -49,23 +49,28 @@ list { auth:
 ### SYNC methods example
 ```js
 // dir = 'auth', key = 'user', value = 'pass'
-console.log('put', db.put('auth', 'user', 'pass'));
-const { data, uid } = db.get('auth', 'user');
-console.log('get', data.toString(), uid);
-const keys = db.keys('auth');
+console.log('put', db.put('auth', 'user', 'pass')); // throws error if key exists
+const { value, uid } = db.get('auth', 'user');
+console.log('get', value.toString(), uid);
+console.log('set', db.set('auth', 'user', 'PA')); // overwrite value if key exists
+console.log('add', db.add('auth', 'user', 'SS')); // append value if key exists
+const keys = db.keys('auth'); // get the keys list of dir 'auth'
 console.log('keys', keys);
-for (let uid of Object.keys(keys)) { // read each key
-    const { key, data } = db.val('auth', uid, keys[uid]);
-    console.log('val', key.toString(), data.toString());
+for (let uid of Object.keys(keys)) { // for each key
+    const { key, value } = db.val('auth', uid, keys[uid]);
+    console.log('val', key.toString(), value.toString());
+    // db.set('auth', key, 'newValue'); < overwrite value
+    console.log('del', db.del('auth', key)); // key = 'user' (buffer)
 }
-console.log('del', db.del('auth', 'user'));
 /** console.log:
 ---
-put iyppkyvj.0
-get pass iyppkyvj.0
-keys { 'iyppkyvj.0': '7hHLsZBS5AsHqsDKBgwj7g' }
-val user pass
-del iyppkyvj.0
+put iyq1fejt.0
+get pass iyq1fejt.0
+set iyq1fejt.0
+add iyq1fejt.0
+keys { 'iyq1fejt.0': '7hHLsZBS5AsHqsDKBgwj7g' }
+val user PASS
+del iyq1fejt.0
 */
 ```
 ### ASYNC methods example
@@ -74,8 +79,8 @@ del iyppkyvj.0
 db.put('auth', 'user', 'pass', (e, uid) => {
     console.log('put', e, uid);
     if (!e && uid) {
-        db.get('auth', 'user', (e, data, uid) => {
-            console.log('get', e, data ? data.toString() : data, uid);
+        db.get('auth', 'user', (e, value, uid) => {
+            console.log('get', e, value ? value.toString() : value, uid);
             if (!e && uid) {
                 db.del('auth', 'user', (e, uid) => {
                     console.log('del', e, uid);
@@ -86,9 +91,9 @@ db.put('auth', 'user', 'pass', (e, uid) => {
 });
 /** console.log:
 ---
-put undefined iyppkyvo.1
-get undefined pass iyppkyvo.1
-del undefined iyppkyvo.1
+put undefined iyq1fejz.1
+get undefined pass iyq1fejz.1
+del undefined iyq1fejz.1
 */
 ```
 ### Stream example
@@ -99,18 +104,29 @@ client.pipe(db.server()).pipe(client);
 client.put('auth', 'user', 'pass', (e, uid) => {
     console.log('put', e, uid);
     if (!e && uid) {
-        client.get('auth', 'user', (e, data, uid) => {
-            console.log('get', e, data ? data.toString() : data, uid);
+        client.get('auth', 'user', (e, value, uid) => {
+            console.log('get', e, value ? value.toString() : value, uid);
             if (!e && uid) {
-                db.keys('auth', (e, keys) => { // get key list of dir 'auth'
-                    console.log('keys', e, keys);
-                    if (!e && keys) {
-                        const uid = Object.keys(keys)[0]; // read first key from the list
-                        db.val('auth', uid, keys[uid], (e, key, data) => {
-                            console.log('val', key.toString(), data.toString());
-                            if (!e) {
-                                client.del('auth', 'user', (e, uid) => {
-                                    console.log('del', e, uid);
+                db.set('auth', 'user', 'PA', (e, uid) => { // set, overwrite value if key exists
+                    console.log('set', e, uid);
+                    if (!e && uid) {
+                        db.add('auth', 'user', 'SS', (e, uid) => { // append value if key exists
+                            console.log('add', e, uid);
+                            if (!e && uid) {
+                                db.keys('auth', (e, keys) => { // get key list of dir 'auth'
+                                    console.log('keys', e, keys);
+                                    if (!e && keys) {
+                                        const uid = Object.keys(keys)[0]; // read first key from the list
+                                        db.val('auth', uid, keys[uid], (e, key, value) => {
+                                            console.log('val', e, key.toString(), value.toString());
+                                            if (!e) {
+                                                // db.set('auth', key, 'newValue', (e, uid) => { ... }); < overwrite value
+                                                client.del('auth', key, (e, uid) => { // key = 'user' (buffer)
+                                                    console.log('del', e, uid);
+                                                });
+                                            }
+                                        });
+                                    }
                                 });
                             }
                         });
@@ -122,11 +138,13 @@ client.put('auth', 'user', 'pass', (e, uid) => {
 });
 /** console.log:
 ---
-put undefined iyppkyvw.2
-get undefined pass iyppkyvw.2
-keys undefined { 'iyppkyvw.2': '7hHLsZBS5AsHqsDKBgwj7g' }
-val user pass
-del undefined iyppkyvw.2
+put undefined iyq1fekg.2
+get undefined pass iyq1fekg.2
+set undefined iyq1fekg.2
+add undefined iyq1fekg.2
+keys undefined { 'iyq1fekg.2': '7hHLsZBS5AsHqsDKBgwj7g' }
+val undefined user PASS
+del undefined iyq1fekg.2
 */
 ```
 ### Socket stream example
@@ -159,7 +177,7 @@ net.createServer(socket => {
 }).once('close', () => console.log('socket.server close'));
 /** console.log:
 ---
-put undefined iyppkywb.3
+put undefined iyq1fekx.3
 rmdir undefined
 list {}
 socket.server close
@@ -195,6 +213,8 @@ db.mkdir('logs', {
     level: 4,
     algorithm: 'sha1',
     digest: 'hex',
+    // WARNING: when use db.add() "append" on compress other than 'none'
+    // make sure, the key value will not be corrupted if append function will be used
     compress: 'gzip'
 });
 // sha1 = 35 unique characters , level = 4
