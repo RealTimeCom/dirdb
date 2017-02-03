@@ -37,7 +37,7 @@ console.log('list', db.list()); // see the current directory list
 /** console.log:
 ---
 list { auth:
-   { level: 2,
+   { level: 3,
      dmode: 448,
      fmode: 384,
      algorithm: 'md5',
@@ -188,7 +188,7 @@ socket.server close
 * `options` - Object, see below
 
 ### Directory table options
-* `level` - Number, key hash directory divisor, default `2`, minim `0` and max limited by `algorithm` and `digest` value, see below
+* `level` - Number, key hash directory divisor, default `3`, minim `0` and max limited by `algorithm` and `digest` value, see below
 * `dmode` - Number, directory mode, default `0o700`
 * `fmode` - Number, file mode, default `0o600`
 * `algorithm` - String, key hash algorithm, default `md5`, possible: `md5` | `sha1` | `sha256` | `sha512`

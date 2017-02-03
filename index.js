@@ -133,7 +133,7 @@ class dirdb {
         this.conf(dir); // cache dir config, sync parse this.f files from each base dir
     }
 }
-dirdb.p = { level: 2, dmode: 0o700, fmode: 0o600, algorithm: 'md5', digest: 'base64', compress: 'none', gc: true }; // default dir options
+dirdb.p = { level: 3, dmode: 0o700, fmode: 0o600, algorithm: 'md5', digest: 'base64', compress: 'none', gc: true }; // default dir options
 function option(opt, p) {
     if (typeof opt === 'object') {
         const algorithm = 'algorithm' in opt && typeof opt.algorithm === 'string' && (opt.algorithm === 'md5' || opt.algorithm === 'sha1' || opt.algorithm === 'sha256' || opt.algorithm === 'sha512') ? opt.algorithm : p.algorithm;
