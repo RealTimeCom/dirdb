@@ -63,7 +63,7 @@ val user2 pass2
 del iyrsvz8o.2
 */
 
-// TEST ASYNC
+// TEST ASYNC, those callbacks are MUCH faster and compact than async/await or Promise ;)
 function test(db, cb) {
     db.put('auth', 'user', 'pass', (e, uid) => { // put, e is defined if key exists
         console.log('put', e, uid);

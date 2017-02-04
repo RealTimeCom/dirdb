@@ -108,6 +108,7 @@ del undefined iyrsvz93.3
 */
 ```
 ### Stream example
+Those callbacks are MUCH faster and compact than async/await or Promise ;)
 ```js
 const client = db.client(false); // false = set default SYNC methods on server
 client.pipe(db.server()).pipe(client);

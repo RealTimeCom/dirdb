@@ -218,7 +218,7 @@ dirdb.prototype.conf = function(dir) {
 };
 dirdb.prototype.mkdir = function(dir, opt, cb) { // don't use slashes \ / or dots . in the dir name
     if (typeof opt === 'function' && cb === undefined) { cb = opt; }
-    if (typeof cb === 'function') { // async
+    if (typeof cb === 'function') { // async, those callbacks are MUCH faster and compact than async/await or Promise ;)
         if (!(dir = safeDir(dir))) { cb(new Error('invalid dir value')); } else {
             if (dir in this.c) { cb(new Error('dir "' + dir + '" exists')); } else {
                 opt = option(opt, this.s); // parse options
@@ -287,7 +287,7 @@ dirdb.prototype.uid = function() {
     return new Date().getTime().toString(36) + '.' + (this.i++).toString(36); // parseInt(uid.split('.')[0], 36) - birthtime
 };
 dirdb.prototype.put = function(dir, key, val, cb) {
-    if (typeof cb === 'function') { // async
+    if (typeof cb === 'function') { // async, those callbacks are MUCH faster and compact than async/await or Promise ;)
         if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
             key = toBuffer(key);
             if (key.length === 0) { cb(new Error('empty key')); } else {
@@ -341,7 +341,7 @@ dirdb.prototype.put = function(dir, key, val, cb) {
     }
 };
 dirdb.prototype.set = function(dir, key, val, cb) {
-    if (typeof cb === 'function') { // async
+    if (typeof cb === 'function') { // async, those callbacks are MUCH faster and compact than async/await or Promise ;)
         if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
             key = toBuffer(key);
             if (key.length === 0) { cb(new Error('empty key')); } else {
@@ -411,7 +411,7 @@ dirdb.prototype.set = function(dir, key, val, cb) {
     }
 };
 dirdb.prototype.add = function(dir, key, val, cb) {
-    if (typeof cb === 'function') { // async
+    if (typeof cb === 'function') { // async, those callbacks are MUCH faster and compact than async/await or Promise ;)
         if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
             //if (this.c[dir].compress !== 'none') { cb(new Error('compress "' + this.c[dir].compress + '" enabled on dir "' + dir + '"')); } else {
                 key = toBuffer(key);
@@ -484,7 +484,7 @@ dirdb.prototype.add = function(dir, key, val, cb) {
     }
 };
 dirdb.prototype.get = function(dir, key, cb) {
-    if (typeof cb === 'function') { // async
+    if (typeof cb === 'function') { // async, those callbacks are MUCH faster and compact than async/await or Promise ;)
         if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
             key = toBuffer(key);
             if (key.length === 0) { cb(new Error('empty key')); } else {
@@ -528,7 +528,7 @@ dirdb.prototype.get = function(dir, key, cb) {
     }
 };
 dirdb.prototype.del = function(dir, key, cb) {
-    if (typeof cb === 'function') { // async
+    if (typeof cb === 'function') { // async, those callbacks are MUCH faster and compact than async/await or Promise ;)
         if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
             key = toBuffer(key);
             if (key.length === 0) { cb(new Error('empty key')); } else {
@@ -578,7 +578,7 @@ dirdb.prototype.del = function(dir, key, cb) {
 };
 
 function each(a, r, d, l, n, opt, k, cb) {
-    if (typeof cb === 'function') { // async
+    if (typeof cb === 'function') { // async, those callbacks are MUCH faster and compact than async/await or Promise ;)
         if (a.length > 0) {
             fs.lstat(d + path.sep + a[0], (e, s) => {
                 if (e) { cb(e); } else {
@@ -662,7 +662,7 @@ dirdb.prototype.keys = function(dir, opt, cb) {
     }
 };
 dirdb.prototype.val = function(dir, uid, hash, cb) {
-    if (typeof cb === 'function') { // async
+    if (typeof cb === 'function') { // async, those callbacks are MUCH faster and compact than async/await or Promise ;)
         if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
             if (!(typeof uid === 'string' && uid.split('.').length === 2)) { cb(new Error('invalid uid "' + uid + '"')); } else {
                 const l = hash.length;
