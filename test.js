@@ -44,7 +44,6 @@ for (let uid of Object.keys(keys)) { // for each key
     // db.set('auth', key, 'newValue'); < overwrite value
     console.log('del', db.del('auth', key)); // key = 'user' (buffer)
 }
-//db.keys('auth', (e, uid, key) => console.log('key', e, uid, key.toString()));
 /** console.log:
 ---
 put iyrsvz8l.0
