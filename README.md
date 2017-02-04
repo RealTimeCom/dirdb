@@ -50,27 +50,39 @@ list { auth:
 ```js
 // dir = 'auth', key = 'user', value = 'pass'
 console.log('put', db.put('auth', 'user', 'pass')); // throws error if key exists
-const { value, uid } = db.get('auth', 'user');
+const { value, uid } = db.get('auth', 'user'); // read key value
 console.log('get', value.toString(), uid);
 console.log('set', db.set('auth', 'user', 'PA')); // overwrite value if key exists
 console.log('add', db.add('auth', 'user', 'SS')); // append value if key exists
-const keys = db.keys('auth'); // get the keys list of dir 'auth'
+console.log('add', db.add('auth', 'user1', 'pass1')); // if key not found, db.add() will create
+console.log('set', db.set('auth', 'user2', 'pass2')); // if key not found, db.set() will create
+// get the keys list of dir 'auth', with optional range select { start: 0, end: 2 }
+const keys = db.keys('auth', { start: 0, end: 3 }); // range is very useful for pagination and not only :)
 console.log('keys', keys);
 for (let uid of Object.keys(keys)) { // for each key
-    const { key, value } = db.val('auth', uid, keys[uid]);
+    const { key, value } = db.val('auth', uid, keys[uid]); // read key-value, using uid-hash
     console.log('val', key.toString(), value.toString());
     // db.set('auth', key, 'newValue'); < overwrite value
     console.log('del', db.del('auth', key)); // key = 'user' (buffer)
 }
+//db.keys('auth', (e, uid, key) => console.log('key', e, uid, key.toString()));
 /** console.log:
 ---
-put iyq1fejt.0
-get pass iyq1fejt.0
-set iyq1fejt.0
-add iyq1fejt.0
-keys { 'iyq1fejt.0': '7hHLsZBS5AsHqsDKBgwj7g' }
+put iyrsvz8l.0
+get pass iyrsvz8l.0
+set iyrsvz8l.0
+add iyrsvz8l.0
+add iyrsvz8o.1
+set iyrsvz8o.2
+keys { 'iyrsvz8l.0': '7hHLsZBS5AsHqsDKBgwj7g',
+  'iyrsvz8o.1': 'JMnhXlKvxHwiW3V@e@4fnQ',
+  'iyrsvz8o.2': 'fljWO2AZfOtVocSHmJo3IA' }
 val user PASS
-del iyq1fejt.0
+del iyrsvz8l.0
+val user1 pass1
+del iyrsvz8o.1
+val user2 pass2
+del iyrsvz8o.2
 */
 ```
 ### ASYNC methods example
@@ -91,14 +103,14 @@ db.put('auth', 'user', 'pass', (e, uid) => {
 });
 /** console.log:
 ---
-put undefined iyq1fejz.1
-get undefined pass iyq1fejz.1
-del undefined iyq1fejz.1
+put undefined iyrsvz93.3
+get undefined pass iyrsvz93.3
+del undefined iyrsvz93.3
 */
 ```
 ### Stream example
 ```js
-const client = db.client();
+const client = db.client(false); // false = set default SYNC methods on server
 client.pipe(db.server()).pipe(client);
 // dir = 'auth', key = 'user', value = 'pass'
 client.put('auth', 'user', 'pass', (e, uid) => {
@@ -138,20 +150,20 @@ client.put('auth', 'user', 'pass', (e, uid) => {
 });
 /** console.log:
 ---
-put undefined iyq1fekg.2
-get undefined pass iyq1fekg.2
-set undefined iyq1fekg.2
-add undefined iyq1fekg.2
-keys undefined { 'iyq1fekg.2': '7hHLsZBS5AsHqsDKBgwj7g' }
+put undefined iyrsvz9p.4
+get undefined pass iyrsvz9p.4
+set undefined iyrsvz9p.4
+add undefined iyrsvz9p.4
+keys undefined { 'iyrsvz9p.4': '7hHLsZBS5AsHqsDKBgwj7g' }
 val undefined user PASS
-del undefined iyq1fekg.2
+del undefined iyrsvz9p.4
 */
 ```
 ### Socket stream example
 ```js
 const net = require('net');
 const server = db.server();
-const client = db.client();
+const client = db.client(true); // true = set default ASYNC methods on server
 
 net.createServer(socket => {
     socket.pipe(server).pipe(socket); // pipe db.server 'server' into socket.client 'socket'
@@ -177,7 +189,7 @@ net.createServer(socket => {
 }).once('close', () => console.log('socket.server close'));
 /** console.log:
 ---
-put undefined iyq1fekx.3
+put undefined iyrsvzac.5
 rmdir undefined
 list {}
 socket.server close

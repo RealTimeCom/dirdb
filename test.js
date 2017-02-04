@@ -27,16 +27,20 @@ list { auth:
      gc: true } }
 */
 
+
 // TEST SYNC
 console.log('put', db.put('auth', 'user', 'pass')); // throws error if key exists
-const { value, uid } = db.get('auth', 'user');
+const { value, uid } = db.get('auth', 'user'); // read key value
 console.log('get', value.toString(), uid);
 console.log('set', db.set('auth', 'user', 'PA')); // overwrite value if key exists
 console.log('add', db.add('auth', 'user', 'SS')); // append value if key exists
-const keys = db.keys('auth'); // get the keys list of dir 'auth'
-console.log('keys', keys);//, { start: 1, end: 3 }
+console.log('add', db.add('auth', 'user1', 'pass1')); // if key not found, db.add() will create
+console.log('set', db.set('auth', 'user2', 'pass2')); // if key not found, db.set() will create
+// get the keys list of dir 'auth', with optional range select { start: 0, end: 2 }
+const keys = db.keys('auth', { start: 0, end: 3 }); // range is very useful for pagination and not only :)
+console.log('keys', keys);
 for (let uid of Object.keys(keys)) { // for each key
-    const { key, value } = db.val('auth', uid, keys[uid]);
+    const { key, value } = db.val('auth', uid, keys[uid]); // read key-value, using uid-hash
     console.log('val', key.toString(), value.toString());
     // db.set('auth', key, 'newValue'); < overwrite value
     console.log('del', db.del('auth', key)); // key = 'user' (buffer)
@@ -44,17 +48,25 @@ for (let uid of Object.keys(keys)) { // for each key
 //db.keys('auth', (e, uid, key) => console.log('key', e, uid, key.toString()));
 /** console.log:
 ---
-put iyq1fejt.0
-get pass iyq1fejt.0
-set iyq1fejt.0
-add iyq1fejt.0
-keys { 'iyq1fejt.0': '7hHLsZBS5AsHqsDKBgwj7g' }
+put iyrsvz8l.0
+get pass iyrsvz8l.0
+set iyrsvz8l.0
+add iyrsvz8l.0
+add iyrsvz8o.1
+set iyrsvz8o.2
+keys { 'iyrsvz8l.0': '7hHLsZBS5AsHqsDKBgwj7g',
+  'iyrsvz8o.1': 'JMnhXlKvxHwiW3V@e@4fnQ',
+  'iyrsvz8o.2': 'fljWO2AZfOtVocSHmJo3IA' }
 val user PASS
-del iyq1fejt.0
+del iyrsvz8l.0
+val user1 pass1
+del iyrsvz8o.1
+val user2 pass2
+del iyrsvz8o.2
 */
 
 // TEST ASYNC
-function async(db, t, cb) {
+function test(db, cb) {
     db.put('auth', 'user', 'pass', (e, uid) => { // put, e is defined if key exists
         console.log('put', e, uid);
         if (!e && uid) {
@@ -67,33 +79,24 @@ function async(db, t, cb) {
                             db.add('auth', 'user', 'SS', (e, uid) => { // append value if key exists
                                 console.log('add', e, uid);
                                 if (!e && uid) {
-                                    if (t) { // is stream, get keys list is safe, server db core sync call
-                                        db.keys('auth', (e, keys) => {
-                                            console.log('keys', e, keys);
-                                            if (!e && keys) {
-                                                const uid = Object.keys(keys)[0]; // read first key from the list
-                                                db.val('auth', uid, keys[uid], (e, key, value) => {
-                                                    console.log('val', e, key.toString(), value.toString());
-                                                    if (!e) {
-                                                        // db.set('auth', key, 'newValue', (e, uid) => { ... }); < overwrite value
-                                                        db.del('auth', key, (e, uid) => { // key = 'user' (buffer)
-                                                            console.log('del', e, uid);
-                                                            if (!e && uid) {
-                                                                if (cb) { cb(); } // call next
-                                                            }
-                                                        });
-                                                    }
-                                                });
-                                            }
-                                        });
-                                    } else { // is db core, async db.keys() is unsafe here, muliple random call backs
-                                        db.del('auth', 'user', (e, uid) => {
-                                            console.log('del', e, uid);
-                                            if (!e && uid) {
-                                                if (cb) { cb(); } // call next
-                                            }
-                                        });
-                                    }
+                                    db.keys('auth', { end: 1 }, (e, keys) => { // select first key, range = { end: 1 }
+                                        console.log('keys', e, keys);
+                                        if (!e && keys) {
+                                            const uid = Object.keys(keys)[0]; // read first key from the list
+                                            db.val('auth', uid, keys[uid], (e, key, value) => {
+                                                console.log('val', e, key.toString(), value.toString());
+                                                if (!e) {
+                                                    // db.set('auth', key, 'newValue', (e, uid) => { ... }); < overwrite value
+                                                    db.del('auth', key, (e, uid) => { // key = 'user' (buffer)
+                                                        console.log('del', e, uid);
+                                                        if (!e && uid) {
+                                                            if (cb) { cb(); } // call next
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    });
                                 }
                             });
                         }
@@ -103,31 +106,33 @@ function async(db, t, cb) {
         }
     });
 }
-async(db, false, testStream); // core db test
+test(db, testStream); // core db test
 /** console.log:
 ---
-put undefined iyq1fejz.1
-get undefined pass iyq1fejz.1
-set undefined iyq1fejz.1
-add undefined iyq1fejz.1
-del undefined iyq1fejz.1
+put undefined iyrsvz93.3
+get undefined pass iyrsvz93.3
+set undefined iyrsvz93.3
+add undefined iyrsvz93.3
+keys undefined { 'iyrsvz93.3': '7hHLsZBS5AsHqsDKBgwj7g' }
+val undefined user PASS
+del undefined iyrsvz93.3
 */
 
 // TEST STREAM
 function testStream() {
-    const client = db.client();
+    const client = db.client(false); // false = set default SYNC methods on server
     client.pipe(db.server()).pipe(client);
-    async(client, true, testSocket); // stream test
+    test(client, testSocket); // stream test
 }
 /** console.log:
 ---
-put undefined iyq1fekg.2
-get undefined pass iyq1fekg.2
-set undefined iyq1fekg.2
-add undefined iyq1fekg.2
-keys undefined { 'iyq1fekg.2': '7hHLsZBS5AsHqsDKBgwj7g' }
+put undefined iyrsvz9p.4
+get undefined pass iyrsvz9p.4
+set undefined iyrsvz9p.4
+add undefined iyrsvz9p.4
+keys undefined { 'iyrsvz9p.4': '7hHLsZBS5AsHqsDKBgwj7g' }
 val undefined user PASS
-del undefined iyq1fekg.2
+del undefined iyrsvz9p.4
 */
 
 function end() {
@@ -144,7 +149,7 @@ function end() {
 function testSocket() {
     const net = require('net');
     const server = db.server();
-    const client = db.client();
+    const client = db.client(true); // true = set default ASYNC methods on server
     net.createServer(socket => {
         // filter by IPv4: if (socket.remoteAddress !== '127.0.0.1') { return socket.destroy(); }
         socket.pipe(server).pipe(socket); // pipe db.server 'server' into socket.client 'socket'
@@ -153,19 +158,20 @@ function testSocket() {
         client.server = this; // optional, attach socket.server 'this' to the db.client 'client'
         net.connect(a.port, a.address, function() { // connect to socket.server Port 'a.port' and IP 'a.address'
             this.pipe(client).pipe(this); // pipe db.client 'client' into socket.client 'this'
-            async(client, true, end.bind(client)); // socket stream test
+            test(client, end.bind(client)); // socket stream test
         });
     }).once('close', () => console.log('socket.server close'));
 }
 /** console.log:
 ---
-put undefined iyq1fekx.3
-get undefined pass iyq1fekx.3
-set undefined iyq1fekx.3
-add undefined iyq1fekx.3
-keys undefined { 'iyq1fekx.3': '7hHLsZBS5AsHqsDKBgwj7g' }
+put undefined iyrsvzac.5
+get undefined pass iyrsvzac.5
+set undefined iyrsvzac.5
+add undefined iyrsvzac.5
+keys undefined { 'iyrsvzac.5': '7hHLsZBS5AsHqsDKBgwj7g' }
 val undefined user PASS
-del undefined iyq1fekx.3
+del undefined iyrsvzac.5
 rmdir undefined
 list {}
+socket.server close
 */

@@ -10,43 +10,57 @@ const fs = require('fs'),
     rmdir = require('rm-dir');
 
 function request(resp, head, body) {
-    if ('f' in head && typeof head.f === 'string') {
-        switch (head.f) {
-            case 'mkdir': this.db.mkdir(head.d, head.o, (e, dir) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : dir })); break;
-            case 'keys':
-                try { // sync, for safety
-                    resp({ f: head.f, e: undefined, r: this.db.keys(head.d, head.o) });
-                } catch (e) {
-                    resp({ f: head.f, e: e.message, r: undefined });
+    if ('s' in head && typeof head.s === 'boolean' && 'f' in head && typeof head.f === 'string') {
+        if (head.s) { // sync
+            try {
+                switch (head.f) {
+                    case 'mkdir':
+                    case 'keys': resp({ f: head.f, r: this.db[head.f](head.d, head.o) }); break;
+                    case 'put':
+                    case 'set':
+                    case 'add': resp({ f: head.f, r: this.db[head.f](head.d, body.slice(0, head.k), body.slice(head.k)) }); break;
+                    case 'del': resp({ f: head.f, r: this.db.del(head.d, body) }); break;
+                    case 'get':
+                        const { val, uid } = db.get(head.d, body);
+                        resp({ f: head.f, r: uid }, val);
+                        break;
+                    case 'val':
+                        const { key, value } = db.val(head.d, head.u, head.h);
+                        resp({ f: head.f, k: key.length }, Buffer.concat([key, value]));
+                        break;
+                    case 'rmdir': this.db.rmdir(head.d); resp({ f: head.f }); break;
+                    case 'list':  resp({ f: head.f, r: this.db.c }); break;
+                    case 'isdir': resp({ f: head.f, r: this.db.isdir(head.d) }); break;
+                    default: throw new Error('function "' + head.f + '" not found');
                 }
-                break;
-            case 'put':
-            case 'set':
-            case 'add': this.db[head.f](head.d, body.slice(0, head.k), body.slice(head.k), (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid })); break;
-            case 'del': this.db.del(head.d, body, (e, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid })); break;
-            case 'get': this.db.get(head.d, body, (e, value, uid) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : uid }, value)); break;
-            case 'val':
-                this.db.val(head.d, head.u, head.h, (e, key, value) => {
-                    if (e) {
-                        resp({ f: head.f, e: e.message });
-                    } else {
-                        resp({ f: head.f, e: undefined, k: key.length }, Buffer.concat([key, value]));
-                    }
-                });
-                break;
-            case 'rmdir':
-                try { // sync, for safety
-                    this.db.rmdir(head.d);
-                    resp({ f: head.f, e: undefined });
-                } catch (e) {
-                    resp({ f: head.f, e: e.message });
-                }
-                break;
-            case 'list':  resp({ f: head.f, r: this.db.c }); break;
-            case 'isdir': resp({ f: head.f, r: this.db.isdir(head.d) }); break;
-            default: resp({ e: 'function "' + head.f + '" not found' });
+            } catch (e) {
+                resp({ f: head.f, e: e.message });
+            }
+        } else { // async
+            switch (head.f) {
+                case 'mkdir':
+                case 'keys': this.db[head.f](head.d, head.o, (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r })); break;
+                case 'put':
+                case 'set':
+                case 'add': this.db[head.f](head.d, body.slice(0, head.k), body.slice(head.k), (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r })); break;
+                case 'del': this.db.del(head.d, body, (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r })); break;
+                case 'get': this.db.get(head.d, body, (e, value, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r }, value)); break;
+                case 'val':
+                    this.db.val(head.d, head.u, head.h, (e, key, value) => {
+                        if (e) {
+                            resp({ f: head.f, e: e.message });
+                        } else {
+                            resp({ f: head.f, e: undefined, k: key.length }, Buffer.concat([key, value]));
+                        }
+                    });
+                    break;
+                case 'rmdir': this.db.rmdir(head.d, e => resp({ f: head.f, e: e ? e.message : undefined })); break;
+                case 'list':  resp({ f: head.f, r: this.db.c }); break;
+                case 'isdir': resp({ f: head.f, r: this.db.isdir(head.d) }); break;
+                default: resp({ e: 'function "' + head.f + '" not found' });
+            }
         }
-    } else { resp({ e: 'function not found' }); }
+    } else { resp({ e: 'invalid params' }); }
 }
 function filter(resp, head, body) {
     if (resp) {
@@ -73,55 +87,58 @@ function filter(resp, head, body) {
     }
 }
 class client extends rpc.client {
-    constructor() { super(filter); }
+    constructor(sync) {
+        super(filter);
+        this.sync = sync ? true : false;
+    }
 }
 client.prototype.mkdir = function(dir, opt, resp) {
     if (typeof opt === 'function' && resp === undefined) { resp = opt; }
-    this.exec(resp, { f: 'mkdir', d: dir, o: opt });
+    this.exec(resp, { s: this.sync, f: 'mkdir', d: dir, o: opt });
     return this;
 };
 client.prototype.rmdir = function(dir, resp) {
-    this.exec(resp, { f: 'rmdir', d: dir });
+    this.exec(resp, { s: this.sync, f: 'rmdir', d: dir });
     return this;
 };
 client.prototype.put = function(dir, key, val, resp) {
     key = toBuffer(key);
-    this.exec(resp, { f: 'put', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
+    this.exec(resp, { s: this.sync, f: 'put', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
     return this;
 };
 client.prototype.set = function(dir, key, val, resp) {
     key = toBuffer(key);
-    this.exec(resp, { f: 'set', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
+    this.exec(resp, { s: this.sync, f: 'set', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
     return this;
 };
 client.prototype.add = function(dir, key, val, resp) {
     key = toBuffer(key);
-    this.exec(resp, { f: 'add', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
+    this.exec(resp, { s: this.sync, f: 'add', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
     return this;
 };
 client.prototype.get = function(dir, key, resp) {
-    this.exec(resp, { f: 'get', d: dir }, key);
+    this.exec(resp, { s: this.sync, f: 'get', d: dir }, key);
     return this;
 };
 client.prototype.del = function(dir, key, resp) {
-    this.exec(resp, { f: 'del', d: dir }, key);
+    this.exec(resp, { s: this.sync, f: 'del', d: dir }, key);
     return this;
 };
 client.prototype.list = function(resp) {
-    this.exec(resp, { f: 'list' });
+    this.exec(resp, { s: this.sync, f: 'list' });
     return this;
 };
 client.prototype.isdir = function(dir, resp) {
-    this.exec(resp, { f: 'list', d: dir });
+    this.exec(resp, { s: this.sync, f: 'list', d: dir });
     return this;
 };
 client.prototype.keys = function(dir, opt, resp) {
     if (typeof opt === 'function' && resp === undefined) { resp = opt; }
-    this.exec(resp, { f: 'keys', d: dir, o: opt });
+    this.exec(resp, { s: this.sync, f: 'keys', d: dir, o: opt });
     return this;
 };
 client.prototype.val = function(dir, uid, hash, resp) {
-    this.exec(resp, { f: 'val', d: dir, u: uid, h: hash });
+    this.exec(resp, { s: this.sync, f: 'val', d: dir, u: uid, h: hash });
     return this;
 };
 
@@ -560,63 +577,69 @@ dirdb.prototype.del = function(dir, key, cb) {
     }
 };
 
-function scan(r, d, l, n, opt, k, cb) {
+function each(a, r, d, l, n, opt, k, cb) {
     if (typeof cb === 'function') { // async
-        if (!k.break) {
-            fs.readdir(d, (e, a) => {
-                if (e) { k.break = true; cb(e); } else {
-                    for (let v of a) {
-                        if (!k.break) {
-                            fs.lstat(d + path.sep + v, (e, s) => {
-                                if (e) { k.break = true; cb(e); } else {
-                                    if (s.isDirectory()) {
-                                        scan(r, d + path.sep + v, l, n, opt, k, cb);
-                                    } else if (s.isFile() && d.length === l + n) {
-                                        const x = path.parse(v);
-                                        if (x.ext === '.k') {
-                                            cb(undefined, x.name, d.substr(l).split(path.sep).join(''));
-                                        }
+        if (a.length > 0) {
+            fs.lstat(d + path.sep + a[0], (e, s) => {
+                if (e) { cb(e); } else {
+                    if (s.isDirectory()) {
+                        readdir(r, d + path.sep + a[0], l, n, opt, k, e => {
+                            if (e) { cb(e); } else { each(a.splice(0, 1) ? a : a, r, d, l, n, opt, k, cb); }
+                        });
+                    } else {
+                        if (s.isFile() && d.length === l + n) {
+                            const x = path.parse(a[0]);
+                            if (x.ext === '.k') {
+                                if (opt && typeof opt.start === 'number') { // start point
+                                    if (k.count >= opt.start) {
+                                        if (opt && typeof opt.end === 'number') { // and end point (both)
+                                            if (k.count < opt.end) { r[x.name] = d.substr(l).split(path.sep).join(''); }
+                                        } else { r[x.name] = d.substr(l).split(path.sep).join(''); } // only start point
                                     }
-                                }
-                            });
+                                } else if (opt && typeof opt.end === 'number') { // only end point
+                                    if (k.count < opt.end) { r[x.name] = d.substr(l).split(path.sep).join(''); }
+                                } else { r[x.name] = d.substr(l).split(path.sep).join(''); } // no start or end point
+                                k.count++;
+                            }
                         }
+                        each(a.splice(0, 1) ? a : a, r, d, l, n, opt, k, cb);
                     }
                 }
             });
-        }
+        } else { cb(undefined, r); }
     } else { // sync
-        let s, x;
-        for (let v of fs.readdirSync(d)) {
-            if (opt && typeof opt.end === 'number') { // end point
-                if (k.count < opt.end) {
-                    s = fs.lstatSync(d + path.sep + v);
-                    if (s.isDirectory()) {
-                        scan(r, d + path.sep + v, l, n, opt, k);
-                    } else if (s.isFile() && d.length === l + n) {
-                        x = path.parse(v);
-                        if (x.ext === '.k') {
-                            if (opt && typeof opt.start === 'number') { // start point
-                                if (k.count >= opt.start) { r[x.name] = d.substr(l).split(path.sep).join(''); }
-                            } else { r[x.name] = d.substr(l).split(path.sep).join(''); } // no start
-                            k.count++;
-                        }
-                    }
-                } else { break; }
-            } else { // no end
-                s = fs.lstatSync(d + path.sep + v);
-                if (s.isDirectory()) {
-                    scan(r, d + path.sep + v, l, n, opt, k);
-                } else if (s.isFile() && d.length === l + n) {
-                    x = path.parse(v);
+        if (a.length > 0) {
+            const s = fs.lstatSync(d + path.sep + a[0]);
+            if (s.isDirectory()) {
+                readdir(r, d + path.sep + a[0], l, n, opt, k);
+            } else {
+                if (s.isFile() && d.length === l + n) {
+                    const x = path.parse(a[0]);
                     if (x.ext === '.k') {
                         if (opt && typeof opt.start === 'number') { // start point
-                            if (k.count >= opt.start) { r[x.name] = d.substr(l).split(path.sep).join(''); }
-                        } else { r[x.name] = d.substr(l).split(path.sep).join(''); } // no start
+                            if (k.count >= opt.start) {
+                                if (opt && typeof opt.end === 'number') { // and end point (both)
+                                    if (k.count < opt.end) { r[x.name] = d.substr(l).split(path.sep).join(''); }
+                                } else { r[x.name] = d.substr(l).split(path.sep).join(''); } // only start point
+                            }
+                        } else if (opt && typeof opt.end === 'number') { // only end point
+                            if (k.count < opt.end) { r[x.name] = d.substr(l).split(path.sep).join(''); }
+                        } else { r[x.name] = d.substr(l).split(path.sep).join(''); } // no start or end point
                         k.count++;
                     }
                 }
             }
+            each(a.splice(0, 1) ? a : a, r, d, l, n, opt, k);
         }
+    }
+}
+function readdir(r, d, l, n, opt, k, cb) {
+    if (typeof cb === 'function') { // async
+        fs.readdir(d, (e, a) => {
+            if (e) { cb(e); } else { each(a, r, d, l, n, opt, k, cb); }
+        });
+    } else { // sync
+        each(fs.readdirSync(d), r, d, l, n, opt, k);
     }
 }
 dirdb.prototype.keys = function(dir, opt, cb) {
@@ -624,15 +647,17 @@ dirdb.prototype.keys = function(dir, opt, cb) {
     if (typeof cb === 'function') { // async, range is disabled
         if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
             const l = (this.d + path.sep + dir + path.sep).length, n = divisor(this.c[dir]); // total dir length
-            let k = { break: false };
-            scan(undefined, this.d + path.sep + dir, l, n, undefined, k, cb);
+            let r = {}, k = { count: 0 }; // init return object and number of keys
+            range(opt, (e, p) => {
+                if (e) { cb(e); } else { readdir(r, this.d + path.sep + dir, l, n, p, k, cb); }
+            });
         }
         return this;
     } else { // sync
         if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
         const l = (this.d + path.sep + dir + path.sep).length, n = divisor(this.c[dir]); // total dir length
         let r = {}, k = { count: 0 }; // init return object and number of keys
-        scan(r, this.d + path.sep + dir, l, n, range(opt), k);
+        readdir(r, this.d + path.sep + dir, l, n, range(opt), k);
         return r;
     }
 };
@@ -742,20 +767,33 @@ function make(b, p, m, cb) { // make(dirdb.d + path.sep + dir, xpath(hash, level
         }
     }
 }
-function range(opt) {
+function range(opt, cb) {
     let r;
     if (typeof opt === 'object' && ('start' in opt || 'end' in opt)) {
         const start = 'start' in opt ? parseInt(opt.start) : undefined;
         const end = 'end' in opt ? parseInt(opt.end) : undefined;
         if (start !== undefined && end !== undefined) {
             if (start < end && start >= 0 && end > 0) { r = { start: start, end: end }; }
+            else {
+                if (typeof cb === 'function') { cb(new Error('invalid range start "' + start + '", end "' + end + '"')); return; }
+                else { throw new Error('invalid range start "' + start + '", end "' + end + '"'); }
+            }
         } else if (start !== undefined) {
             if (start >= 0) { r = { start: start }; }
+            else {
+                if (typeof cb === 'function') { cb(new Error('invalid range start "' + start + '"')); return; }
+                else { throw new Error('invalid range start "' + start + '"'); }
+            }
         } else if (end !== undefined) {
             if (end > 0) { r = { end: end }; }
+            else {
+                if (typeof cb === 'function') { cb(new Error('invalid range end "' + end + '"')); return; }
+                else { throw new Error('invalid range end "' + end + '"'); }
+            }
         }
     }
-    return r;
+    if (typeof cb === 'function') { cb(undefined, r); }
+    else { return r; }
 }
 function compress(value, type, cb) {
     if (typeof cb === 'function') { // async
