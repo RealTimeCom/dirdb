@@ -27,7 +27,6 @@ list { auth:
      gc: true } }
 */
 
-
 // TEST SYNC
 console.log('put', db.put('auth', 'user', 'pass')); // throws error if key exists
 const { value, uid } = db.get('auth', 'user'); // read key value
@@ -36,7 +35,7 @@ console.log('set', db.set('auth', 'user', 'PA')); // overwrite value if key exis
 console.log('add', db.add('auth', 'user', 'SS')); // append value if key exists
 console.log('add', db.add('auth', 'user1', 'pass1')); // if key not found, db.add() will create
 console.log('set', db.set('auth', 'user2', 'pass2')); // if key not found, db.set() will create
-// get the keys list of dir 'auth', with optional range select { start: 0, end: 2 }
+// get the keys list of dir 'auth', with optional range select { start: 0, end: 3 }
 const keys = db.keys('auth', { start: 0, end: 3 }); // range is very useful for pagination and not only :)
 console.log('keys', keys);
 for (let uid of Object.keys(keys)) { // for each key
