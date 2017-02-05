@@ -35,7 +35,7 @@ obj. // can be: db, db.server or db.client
 methodAsync(..., (...) => { ... }). // and so on...
 methodAsync(..., (...) => { ... });
 ```
-### `db.isdir(dirname)`
+### `isdir(dirname)`
 If `dirname` exist, return/callback object `dirconfig`, or `undefined` if not.
 * `dirname` - String directory table name, without slashes
 ```js
@@ -64,7 +64,7 @@ db.rmdir(dirname, error => {
     if (error) { throw error; }
 });
 ```
-### `db.list()`
+### `list()`
 Return/callback `dbconfig` object `{ dirname: dirconfig, ... }`.
 ```js
 // SYNC
@@ -153,9 +153,9 @@ db.val(dirname, uid, keyhash, (error, key, value) => { // key and value is Buffe
     if (error) { throw error; }
 });
 ```
-### `db.server()`
+### `server()`
 Stream server object.
-### `db.client([async])`
+### `client([async])`
 Stream client object. Server call method functions is async `true` (by default), for sync set `false`.
 ```js
 // call SYNC method functions on server
@@ -188,7 +188,7 @@ net.createServer(socket => {
     });
 });
 ```
-### `db.mkdir(dirname[, options])`
+### `mkdir(dirname[, options])`
 * `dirname` - String directory table name, without slashes
 * `options` - Object, see below
 
@@ -210,7 +210,7 @@ const db = new dirdb('/dir/pathname', {
     gc: false
 });
 ```
-### `db.mkdir()` options example
+### `mkdir()` options example
 High level, means high directory divisor. To increase I/O speed on high number of keys entries, make sure a high level value is defined on `db.mkdir` options. If there is only few key entries on directory, the high level value will decrease the I/O speed.
 ```js
 // dir name 'logs'
