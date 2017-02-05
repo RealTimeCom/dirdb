@@ -24,179 +24,170 @@ Compare test results with <a href="https://travis-ci.org/RealTimeCom/dirdb">trav
 const dirdb = require('dirdb');
 ```
 ### Define the database root directory
-When first time, make sure the directory exists, is empty, and have the right user permissions mode.
+First time, make sure the directory exists, is empty, and have the right user permissions mode.
 ```js
 const db = new dirdb('/dir/path/name');
 ```
-### Make dir `auth`, and verify if not exists
+### Chain calls
+All async method functions return the `Object` they belong (`db`, `db.server` or `db.client`).
 ```js
-if (!db.isdir('auth')) { // verify if dir 'auth' exists
-    db.mkdir('auth'); // make dir 'auth'
-}
-console.log('list', db.list()); // see the current directory list
-/** console.log:
----
-list { auth:
-   { level: 3,
-     dmode: 448,
-     fmode: 384,
-     algorithm: 'md5',
-     digest: 'base64',
-     compress: 'none',
-     gc: true } }
-*/
+obj. // obj = object method, can be: db, db.server or db.client
+methodAsync(..., (...) => { ... }). // and so on...
+methodAsync(..., (...) => { ... });
 ```
-### SYNC methods example
+### `db.isdir(dirname)`
+If `dirname` exist, return/callback `Object` dirconfig, or `undefined` if not.
 ```js
-// dir = 'auth', key = 'user', value = 'pass'
-console.log('put', db.put('auth', 'user', 'pass')); // throws error if key exists
-const { value, uid } = db.get('auth', 'user'); // read key value
-console.log('get', value.toString(), uid);
-console.log('set', db.set('auth', 'user', 'PA')); // overwrite value if key exists
-console.log('add', db.add('auth', 'user', 'SS')); // append value if key exists
-console.log('add', db.add('auth', 'user1', 'pass1')); // if key not found, db.add() will create
-console.log('set', db.set('auth', 'user2', 'pass2')); // if key not found, db.set() will create
-// get the keys list of dir 'auth', with optional range select { start: 0, end: 3 }
-const keys = db.keys('auth', { start: 0, end: 3 }); // range is very useful for pagination and not only :)
-console.log('keys', keys);
-for (let uid of Object.keys(keys)) { // for each key
-    const { key, value } = db.val('auth', uid, keys[uid]); // read key-value, using uid-hash
-    console.log('val', key.toString(), value.toString());
-    // db.set('auth', key, 'newValue'); < overwrite value
-    console.log('del', db.del('auth', key)); // key = 'user' (buffer)
-}
-/** console.log:
----
-put iyrsvz8l.0
-get pass iyrsvz8l.0
-set iyrsvz8l.0
-add iyrsvz8l.0
-add iyrsvz8o.1
-set iyrsvz8o.2
-keys { 'iyrsvz8l.0': '7hHLsZBS5AsHqsDKBgwj7g',
-  'iyrsvz8o.1': 'JMnhXlKvxHwiW3V@e@4fnQ',
-  'iyrsvz8o.2': 'fljWO2AZfOtVocSHmJo3IA' }
-val user PASS
-del iyrsvz8l.0
-val user1 pass1
-del iyrsvz8o.1
-val user2 pass2
-del iyrsvz8o.2
-*/
+// SYNC
+db.isdir(dirname);
+// ASYNC
+db.isdir(dirname, dirconfig => { });
 ```
-### ASYNC methods example
+### `mkdir(dirname[, options])`
+Make dir name, if `dirname` exist, return/callback dirname, or throw/callback error if not. For more `options`, see below.
 ```js
-// dir = 'auth', key = 'user', value = 'pass'
-db.put('auth', 'user', 'pass', (e, uid) => {
-    console.log('put', e, uid);
-    if (!e && uid) {
-        db.get('auth', 'user', (e, value, uid) => {
-            console.log('get', e, value ? value.toString() : value, uid);
-            if (!e && uid) {
-                db.del('auth', 'user', (e, uid) => {
-                    console.log('del', e, uid);
-                });
-            }
-        });
-    }
+// SYNC
+db.mkdir(dirname);
+// ASYNC
+db.mkdir(dirname, (error, dirname) => {
+    if (error) { throw error; }
 });
-/** console.log:
----
-put undefined iyrsvz93.3
-get undefined pass iyrsvz93.3
-del undefined iyrsvz93.3
-*/
+```
+### `rmdir(dirname)`
+Remove dir name and its contents, throw/callback error if `dirname` not exists.
+```js
+// SYNC
+db.rmdir(dirname);
+// ASYNC
+db.rmdir(dirname, error => {
+    if (error) { throw error; }
+});
+```
+### `db.list()`
+Return/callback dbconfig object `{ dirname: dirconfig, ... }`
+```js
+// SYNC
+db.list();
+// ASYNC
+db.list(dbconfig => { });
+```
+### `put(dirname, key, value[, callback])`
+Throw/callback `error` if key exists. Return/callback `uid` if success.
+```js
+// SYNC
+db.put(dirname, key, value);
+// ASYNC
+db.put(dirname, key, value, (error, uid) => {
+    if (error) { throw error; }
+});
+```
+### `set(dirname, key, value[, callback])`
+Overwrite value if key exists, or create, if not. Return/callback `uid` if success.
+```js
+// SYNC
+db.put(dirname, key, value);
+// ASYNC
+db.put(dirname, key, value, (error, uid) => {
+    if (error) { throw error; }
+});
+```
+### `add(dirname, key, value[, callback])`
+Append value if key exists, or create, if not. Return/callback `uid` if success.
+```js
+// SYNC
+db.add(dirname, key, value);
+// ASYNC
+db.add(dirname, key, value, (error, uid) => {
+    if (error) { throw error; }
+});
+```
+### `get(dirname, key[, callback])`
+Read key value. Throw/callback `error` if key not exists. Return/callback `value` and `uid` if success.
+```js
+// SYNC
+const { value, uid } = db.get(dirname, key);
+// ASYNC
+db.get(dirname, key, (error, value, uid) => {
+    if (error) { throw error; }
+});
+```
+### `del(dirname, key[, callback])`
+Delete key. Throw/callback `error` if key not exists. Return/callback `uid` if success.
+```js
+// SYNC
+db.del(dirname, key);
+// ASYNC
+db.del(dirname, key, (error, uid) => {
+    if (error) { throw error; }
+});
+```
+### `keys(dirname[, range[, callback]])`
+Return/callback object `keylist` if success.
+* `range` - Object `{ start: Number, end: Number }`
+* `keylist` - Object `{ uid: keyhash, ... }`
+```js
+// SYNC
+db.keys(dirname); // without range select, return all
+db.keys(dirname, { start: 1 }); // example: without end point, return all except first key ( index: 1, 2, ... )
+db.keys(dirname, { start: 0, end: 2 }); // example: return first two keys ( index: 0 and 1 )
+// ASYNC
+db.keys(dirname, (error, keylist) => { // without range select, return all
+    if (error) { throw error; }
+});
+ // example: without start point, return first two keys ( index: 0 and 1 )
+db.keys(dirname, { end: 2 }, (error, keylist) => {
+    if (error) { throw error; }
+});
+```
+### `val(dirname, uid, keyhash[, callback])`
+Throw/callback `error` if key not exists. Return/callback `key` and `value` if success. See above `keylist` for `uid` and `keyhash`.
+```js
+// SYNC
+const { key, value } = db.val(dirname, uid, keyhash);
+// ASYNC
+db.val(dirname, uid, keyhash, (error, key, value) => {
+    if (error) { throw error; }
+});
+```
+### `db.server()`
+Stream server object.
+### `db.client([async])`
+Stream client object. The server call method functions is async `true` (by default), if `false`, the server will use sync functions.
+```js
+// call SYNC method functions on server
+db.client(false);
+// call ASYNC method functions on server
+db.client();
+db.client(true); // true, is the default value
 ```
 ### Stream example
 Those callbacks are MUCH faster and compact than async/await or Promise ;)
 ```js
-const client = db.client(false); // false = set default SYNC methods on server
+const client = db.client();
 client.pipe(db.server()).pipe(client);
-// dir = 'auth', key = 'user', value = 'pass'
-client.put('auth', 'user', 'pass', (e, uid) => {
-    console.log('put', e, uid);
-    if (!e && uid) {
-        client.get('auth', 'user', (e, value, uid) => {
-            console.log('get', e, value ? value.toString() : value, uid);
-            if (!e && uid) {
-                db.set('auth', 'user', 'PA', (e, uid) => { // set, overwrite value if key exists
-                    console.log('set', e, uid);
-                    if (!e && uid) {
-                        db.add('auth', 'user', 'SS', (e, uid) => { // append value if key exists
-                            console.log('add', e, uid);
-                            if (!e && uid) {
-                                db.keys('auth', (e, keys) => { // get key list of dir 'auth'
-                                    console.log('keys', e, keys);
-                                    if (!e && keys) {
-                                        const uid = Object.keys(keys)[0]; // read first key from the list
-                                        db.val('auth', uid, keys[uid], (e, key, value) => {
-                                            console.log('val', e, key.toString(), value.toString());
-                                            if (!e) {
-                                                // db.set('auth', key, 'newValue', (e, uid) => { ... }); < overwrite value
-                                                client.del('auth', key, (e, uid) => { // key = 'user' (buffer)
-                                                    console.log('del', e, uid);
-                                                });
-                                            }
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
-            }
-        });
-    }
+client.put(dirname, key, value, (error, uid) => {
+    if (error) { throw error; }
 });
-/** console.log:
----
-put undefined iyrsvz9p.4
-get undefined pass iyrsvz9p.4
-set undefined iyrsvz9p.4
-add undefined iyrsvz9p.4
-keys undefined { 'iyrsvz9p.4': '7hHLsZBS5AsHqsDKBgwj7g' }
-val undefined user PASS
-del undefined iyrsvz9p.4
-*/
 ```
 ### Socket stream example
 ```js
 const net = require('net');
 const server = db.server();
-const client = db.client(true); // true = set default ASYNC methods on server
-
+const client = db.client();
 net.createServer(socket => {
-    socket.pipe(server).pipe(socket); // pipe db.server 'server' into socket.client 'socket'
+    socket.pipe(server).pipe(socket);
 }).listen(function() {
     const a = this.address(); // get the socket.server port and address
-    client.server = this; // optional, attach socket.server 'this' to the db.client 'client'
-    net.connect(a.port, a.address, function() { // connect to socket.server Port 'a.port' and IP 'a.address'
-        this.pipe(client).pipe(this); // pipe db.client 'client' into socket.client 'this'
-        client.put('auth', 'user', 'pass', (e, uid) => {
-            console.log('put', e, uid);
-            if (!e && uid) {
-                client.rmdir('auth', e => { // remove dir 'auth'
-                    console.log('rmdir', e);
-                    client.list(r => { // see the current directory list
-                        console.log('list', r);
-                        client.push(null); // optional, end stream db.client 'client'
-                        client.server.close(); // optional, close socket.server 'client.server'
-                    });
-                });
-            }
+    net.connect(a.port, a.address, function() {
+        this.pipe(client).pipe(this);
+        client.set(dirname, key, value, (error, uid) => {
+            if (error) { throw error; }
         });
     });
-}).once('close', () => console.log('socket.server close'));
-/** console.log:
----
-put undefined iyrsvzac.5
-rmdir undefined
-list {}
-socket.server close
-*/
+});
 ```
-### `db.mkdir(name, options)`
-* `name` - String directory table name, without slashes
+### `db.mkdir(dirname[, options])`
+* `dirname` - String directory table name, without slashes
 * `options` - Object, see below
 
 ### Directory table options

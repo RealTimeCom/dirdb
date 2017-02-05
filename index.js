@@ -44,13 +44,21 @@ function request(resp, head, body) {
                 case 'set':
                 case 'add': this.db[head.f](head.d, body.slice(0, head.k), body.slice(head.k), (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r })); break;
                 case 'del': this.db.del(head.d, body, (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r })); break;
-                case 'get': this.db.get(head.d, body, (e, value, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r }, value)); break;
+                case 'get':
+                    this.db.get(head.d, body, (e, value, r) => {
+                        if (e) {
+                            resp({ f: head.f, e: e.message });
+                        } else {
+                            resp({ f: head.f, r: r }, value);
+                        }
+                    });
+                    break;
                 case 'val':
                     this.db.val(head.d, head.u, head.h, (e, key, value) => {
                         if (e) {
                             resp({ f: head.f, e: e.message });
                         } else {
-                            resp({ f: head.f, e: undefined, k: key.length }, Buffer.concat([key, value]));
+                            resp({ f: head.f, k: key.length }, Buffer.concat([key, value]));
                         }
                     });
                     break;
@@ -71,19 +79,19 @@ function filter(resp, head, body) {
                 case 'put':
                 case 'set':
                 case 'add':
-                case 'del': resp(head.e, head.r); break;
-                case 'get': resp(head.e, body, head.r); break;
+                case 'del': resp(head.e ? new Error(head.e) : undefined, head.r); break;
+                case 'get': resp(head.e ? new Error(head.e) : undefined, body, head.r); break;
                 case 'val':
-                    if (head.e) { resp(head.e); } else {
-                         resp(head.e, body.slice(0, head.k), body.slice(head.k));
+                    if (head.e) { resp(new Error(head.e)); } else {
+                         resp(undefined, body.slice(0, head.k), body.slice(head.k));
                     }
                     break;
-                case 'rmdir': resp(head.e); break;
+                case 'rmdir': resp(head.e ? new Error(head.e) : undefined); break;
                 case 'list':
                 case 'isdir': resp(head.r); break;
-                default: resp(head.e);
+                default: resp(new Error(head.e));
             }
-        } else { resp(head.e); }
+        } else { resp(new Error(head.e)); }
     }
 }
 class client extends rpc.client {
@@ -693,8 +701,22 @@ dirdb.prototype.val = function(dir, uid, hash, cb) {
     }
 };
 
-dirdb.prototype.list = function() { return this.c; };
-dirdb.prototype.isdir = function(dir) { return typeof dir === 'string' && dir in this.c ? this.c[dir] : undefined; };
+dirdb.prototype.list = function(cb) {
+    if (typeof cb === 'function') { // async
+        cb(this.c);
+        return this;
+    } else { // sync
+        return this.c;
+    }
+};
+dirdb.prototype.isdir = function(dir, cb) {
+    if (typeof cb === 'function') { // async
+        cb(typeof dir === 'string' && dir in this.c ? this.c[dir] : undefined);
+        return this;
+    } else { // sync
+        return typeof dir === 'string' && dir in this.c ? this.c[dir] : undefined;
+    }
+};
 
 class server extends rpc.server {
     constructor(db) {
