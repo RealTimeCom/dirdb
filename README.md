@@ -64,7 +64,7 @@ db.rmdir(dirname, error => {
 });
 ```
 ### `db.list()`
-Return/callback `dbconfig` object `{ dirname: dirconfig, ... }`
+Return/callback `dbconfig` object `{ dirname: dirconfig, ... }`.
 ```js
 // SYNC
 db.list();
@@ -152,7 +152,7 @@ db.val(dirname, uid, keyhash, (error, key, value) => {
 ### `db.server()`
 Stream server object.
 ### `db.client([async])`
-Stream client object. The server call method functions is async `true` (by default), if `false`, the server will use sync functions.
+Stream client object. Server call method functions is async `true` (by default), for sync set `false`.
 ```js
 // call SYNC method functions on server
 db.client(false);
@@ -161,7 +161,6 @@ db.client();
 db.client(true); // true, is the default value
 ```
 ### Stream example
-Those callbacks are MUCH faster and compact than async/await or Promise ;)
 ```js
 const client = db.client();
 client.pipe(db.server()).pipe(client);
@@ -176,8 +175,8 @@ const server = db.server();
 const client = db.client();
 net.createServer(socket => {
     socket.pipe(server).pipe(socket);
-}).listen(function() {
-    const a = this.address(); // get the socket.server port and address
+}).listen(function() { // socket server listen to a random port and address
+    const a = this.address(); // get the socket server port and address
     net.connect(a.port, a.address, function() {
         this.pipe(client).pipe(this);
         client.set(dirname, key, value, (error, uid) => {
