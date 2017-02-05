@@ -153,18 +153,28 @@ db.val(dirname, uid, keyhash, (error, key, value) => { // key and value is Buffe
     if (error) { throw error; }
 });
 ```
+### `setgc(dirname, option)`
+Set `dirname` GC boolean option. When delete a key using `del()` function, if GC is enabled (true), the directory where the key-value was saved, is deleted if is empty. Throw/callback `error` if dirname not exists. Return/callback `dirconfig` if success.
+```js
+// SYNC
+db.setgc(dirname, true); // return Object dirconfig
+// ASYNC
+db.setgc(dirname, false, (error, dirconfig) => { // dirconfig is Object or undefined if error
+    if (error) { throw error; }
+    console.log('gc', dirconfig.gc);
+});
+```
 ### `server()`
 Server stream object. See the stream / socket examples below, of how to pipe server stream into client stream.
 
 ### `client([sync])`
-Client stream object. Server call method functions is sync `false` (by default), for sync set `true`. The sync/async server method can be set individually on any client function with the last argument.
+Client stream object. Server call method functions is sync `false` (by default), for sync set `true`. The sync/async server method can be set individually on any client function, with the last argument.
 ```js
 // call SYNC method functions on server
 db.client(true);
 // call ASYNC method functions on server
 db.client(); // or false
 
-// individually example
 const client = db.client();
 client.set(dirname, key, value, (error, uid) => {
     if (error) { throw error; }

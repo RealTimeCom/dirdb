@@ -2,8 +2,8 @@
 'use strict';
 
 // TODO:
-// db.gcset(dirname, true|false) - overwrite dirname gc option value
-// db.gcdir(optimize) - delete all empty dirs and, if optimize is true: delete all keys without value and all values without key, and all dir contents if not in schema level/algorithm/digest, except .dridb.json file
+// db.rungc(optimize) - delete all empty dirs and, if optimize is true: delete all keys without value and all values without key, and all dir contents if not in schema level/algorithm/digest, except .dridb.json file
+// db.cpdir(fromdir, todir, overwrite) - copy fromdir contents into todir, optional overwrite (true|false) todir keys value
 
 const fs = require('fs'),
     path = require('path'),
@@ -19,6 +19,7 @@ function request(resp, head, body) {
             try {
                 switch (head.f) {
                     case 'mkdir':
+                    case 'setgc':
                     case 'keys': resp({ f: head.f, r: this.db[head.f](head.d, head.o) }); break;
                     case 'put':
                     case 'set':
@@ -43,6 +44,7 @@ function request(resp, head, body) {
         } else { // async
             switch (head.f) {
                 case 'mkdir':
+                case 'setgc':
                 case 'keys': this.db[head.f](head.d, head.o, (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r })); break;
                 case 'put':
                 case 'set':
@@ -151,6 +153,10 @@ client.prototype.keys = function(dir, opt, resp, sync) {
 };
 client.prototype.val = function(dir, uid, hash, resp, sync) {
     this.exec(resp, { s: sync ? true : this.sync, f: 'val', d: dir, u: uid, h: hash });
+    return this;
+};
+client.prototype.setgc = function(dir, opt, resp, sync) {
+    this.exec(resp, { s: sync ? true : this.sync, f: 'setgc', d: dir, o: opt ? true : false });
     return this;
 };
 
@@ -702,6 +708,30 @@ dirdb.prototype.val = function(dir, uid, hash, cb) {
         if (!(typeof hash === 'string' && l >= 22 && l <= 128)) { throw new Error('invalid hash "' + hash + '"'); }
         const f = this.d + path.sep + dir + path.sep + xpath(hash, this.c[dir].level) + path.sep + uid;
         return { key: fs.readFileSync(f + '.k'), value: uncompress(fs.readFileSync(f + '.v'), this.c[dir].compress) };
+    }
+};
+dirdb.prototype.setgc = function(dir, opt, cb) {
+    if (typeof cb === 'function') { // async, those callbacks are MUCH faster and compact than async/await or Promise ;)
+        if (!(typeof dir === 'string' && dir in this.c)) { cb(new Error('dir "' + dir + '" not found')); } else {
+            opt = opt ? true : false;
+            const p = this.c[dir];
+            p.gc = opt;
+            fs.writeFile(this.d + path.sep + dir + path.sep + this.f, JSON.stringify(p), { mode: p.fmode }, e => {
+                if (e) { cb(e); } else {
+                    this.c[dir].gc = opt;
+                    cb(undefined, this.c[dir]);
+                }
+            });
+        }
+        return this;
+    } else { // sync
+        if (!(typeof dir === 'string' && dir in this.c)) { throw new Error('dir "' + dir + '" not found'); }
+        opt = opt ? true : false;
+        const p = this.c[dir];
+        p.gc = opt;
+        fs.writeFileSync(this.d + path.sep + dir + path.sep + this.f, JSON.stringify(p), { mode: p.fmode });
+        this.c[dir].gc = opt;
+        return this.c[dir];
     }
 };
 
