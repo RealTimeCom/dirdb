@@ -31,7 +31,7 @@ const db = new dirdb('/dir/path/name');
 ### Chain calls
 All async method functions return the object they belong (`db`, `db.server` or `db.client`).
 ```js
-obj. // can be: db, db.server or db.client
+obj. // can be: db core or db.client stream
 methodAsync(..., (...) => { ... }). // and so on...
 methodAsync(..., (...) => { ... });
 ```
