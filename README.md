@@ -211,7 +211,7 @@ const db = new dirdb('/dir/pathname', {
 });
 ```
 ### `mkdir()` options example
-High level, means high directory divisor. To increase I/O speed on high number of keys entries, make sure a high level value is defined on `db.mkdir` options. If there is only few key entries on directory, the high level value will decrease the I/O speed.
+High level, means high directory divisor. To increase I/O speed on high number of keys entries, make sure a high level value is defined on `db.mkdir` options. If there is only few key entries on directory, high level value will decrease the I/O speed.
 ```js
 // dir name 'logs'
 db.mkdir('logs', {
