@@ -13,6 +13,7 @@ if (!db.isdir('auth')) { // verify if dir 'auth' exists
     console.log('mkdir', db.mkdir('auth', { level: 2 }));
     console.log('list', db.list());
 }
+console.log('setgc', db.setgc('auth', false));
 /** console.log:
 ---
 list {}
@@ -25,6 +26,13 @@ list { auth:
      digest: 'base64',
      compress: 'none',
      gc: true } }
+setgc { level: 2,
+  dmode: 448,
+  fmode: 384,
+  algorithm: 'md5',
+  digest: 'base64',
+  compress: 'none',
+  gc: false }
 */
 
 // TEST SYNC
