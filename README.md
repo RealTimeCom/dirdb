@@ -29,9 +29,9 @@ First time, make sure the directory exists, is empty, and have the right user pe
 const db = new dirdb('/dir/path/name');
 ```
 ### Chain calls
-All async method functions return the `Object` they belong (`db`, `db.server` or `db.client`).
+All async method functions return the object they belong (`db`, `db.server` or `db.client`).
 ```js
-obj. // obj = object method, can be: db, db.server or db.client
+obj. // can be: db, db.server or db.client
 methodAsync(..., (...) => { ... }). // and so on...
 methodAsync(..., (...) => { ... });
 ```
