@@ -144,7 +144,7 @@ db.keys(dirname, { end: 2 }, (error, keylist) => { // keylist is Object or undef
 });
 ```
 ### `val(dirname, uid, keyhash[, callback])`
-Throw/callback `error` if key not exists. Return/callback `key` and `value` if success. See above `keylist` for `uid` and `keyhash`.
+Throw/callback `error` if key not exists. Return/callback `key` and `value` if success. See the above `keylist` object for `uid` and `keyhash`.
 ```js
 // SYNC
 const { key, value } = db.val(dirname, uid, keyhash); // key and value is Buffer
@@ -154,14 +154,24 @@ db.val(dirname, uid, keyhash, (error, key, value) => { // key and value is Buffe
 });
 ```
 ### `server()`
-Stream server object.
-### `client([async])`
-Stream client object. Server call method functions is async `true` (by default), for sync set `false`.
+Server stream object. See the stream / socket examples below, of how to pipe server stream into client stream.
+
+### `client([sync])`
+Client stream object. Server call method functions is sync `false` (by default), for sync set `true`. The sync/async server method can be set individually on any client function with the last argument.
 ```js
 // call SYNC method functions on server
-db.client(false);
+db.client(true);
 // call ASYNC method functions on server
-db.client();
+db.client(); // or false
+
+// individually example
+const client = db.client();
+client.set(dirname, key, value, (error, uid) => {
+    if (error) { throw error; }
+}, true); // true: call SYNC method function on server
+client.del(dirname, key, (error, uid) => {
+    if (error) { throw error; }
+}, false); // false: call ASYNC method function on server
 ```
 ### Stream example
 ```js

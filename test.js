@@ -118,7 +118,7 @@ del undefined iyrsvz93.3
 
 // TEST STREAM
 function testStream() {
-    const client = db.client(false); // false = set default SYNC methods on server
+    const client = db.client(true); // optional, true: set default SYNC methods on server
     client.pipe(db.server()).pipe(client);
     test(client, testSocket); // stream test
 }
@@ -147,7 +147,7 @@ function end() {
 function testSocket() {
     const net = require('net');
     const server = db.server();
-    const client = db.client(true); // true = set default ASYNC methods on server
+    const client = db.client(); // default (false) ASYNC methods on server
     net.createServer(socket => {
         // filter by IPv4: if (socket.remoteAddress !== '127.0.0.1') { return socket.destroy(); }
         socket.pipe(server).pipe(socket); // pipe db.server 'server' into socket.client 'socket'
