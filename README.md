@@ -36,7 +36,7 @@ methodAsync(..., (...) => { ... }). // and so on...
 methodAsync(..., (...) => { ... });
 ```
 ### `db.isdir(dirname)`
-If `dirname` exist, return/callback `Object` dirconfig, or `undefined` if not.
+If `dirname` exist, return/callback object `dirconfig`, or `undefined` if not.
 ```js
 // SYNC
 db.isdir(dirname);
@@ -44,7 +44,7 @@ db.isdir(dirname);
 db.isdir(dirname, dirconfig => { });
 ```
 ### `mkdir(dirname[, options])`
-Make dir name, if `dirname` exist, return/callback dirname, or throw/callback error if not. For more `options`, see below.
+Make dir name, if `dirname` exist, return/callback `dirname`, or throw/callback `error` if not. For more `options`, see below.
 ```js
 // SYNC
 db.mkdir(dirname);
@@ -54,7 +54,7 @@ db.mkdir(dirname, (error, dirname) => {
 });
 ```
 ### `rmdir(dirname)`
-Remove dir name and its contents, throw/callback error if `dirname` not exists.
+Remove dir name and its contents, throw/callback `error` if `dirname` not exists.
 ```js
 // SYNC
 db.rmdir(dirname);
@@ -64,7 +64,7 @@ db.rmdir(dirname, error => {
 });
 ```
 ### `db.list()`
-Return/callback dbconfig object `{ dirname: dirconfig, ... }`
+Return/callback `dbconfig` object `{ dirname: dirconfig, ... }`
 ```js
 // SYNC
 db.list();
@@ -92,7 +92,7 @@ db.put(dirname, key, value, (error, uid) => {
 });
 ```
 ### `add(dirname, key, value[, callback])`
-Append value if key exists, or create, if not. Return/callback `uid` if success.
+Append `value` if key exists, or create, if not. Return/callback `uid` if success.
 ```js
 // SYNC
 db.add(dirname, key, value);
@@ -102,7 +102,7 @@ db.add(dirname, key, value, (error, uid) => {
 });
 ```
 ### `get(dirname, key[, callback])`
-Read key value. Throw/callback `error` if key not exists. Return/callback `value` and `uid` if success.
+Read key `value`. Throw/callback `error` if key not exists. Return/callback `value` and `uid` if success.
 ```js
 // SYNC
 const { value, uid } = db.get(dirname, key);
@@ -112,7 +112,7 @@ db.get(dirname, key, (error, value, uid) => {
 });
 ```
 ### `del(dirname, key[, callback])`
-Delete key. Throw/callback `error` if key not exists. Return/callback `uid` if success.
+Delete `key`. Throw/callback `error` if key not exists. Return/callback `uid` if success.
 ```js
 // SYNC
 db.del(dirname, key);
@@ -209,7 +209,7 @@ const db = new dirdb('/dir/pathname', {
 });
 ```
 ### `db.mkdir()` options example
-High level, means high directory divisor. To increase I/O speed on high number of keys entries, make sure you define a high level value on `db.mkdir` options. But, if the directory will have few key entries, the high level value will decrease the I/O speed.
+High level, means high directory divisor. To increase I/O speed on high number of keys entries, make sure a high level value is defined on `db.mkdir` options. If there is only few key entries on directory, the high level value will decrease the I/O speed.
 ```js
 // dir name 'logs'
 db.mkdir('logs', {
