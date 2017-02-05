@@ -37,6 +37,7 @@ methodAsync(..., (...) => { ... });
 ```
 ### `db.isdir(dirname)`
 If `dirname` exist, return/callback object `dirconfig`, or `undefined` if not.
+* `dirname` - String directory table name, without slashes
 ```js
 // SYNC
 db.isdir(dirname);
@@ -67,17 +68,20 @@ db.rmdir(dirname, error => {
 Return/callback `dbconfig` object `{ dirname: dirconfig, ... }`.
 ```js
 // SYNC
-db.list();
+db.list(); // return Object dbconfig
 // ASYNC
 db.list(dbconfig => { });
 ```
 ### `put(dirname, key, value[, callback])`
 Throw/callback `error` if key exists. Return/callback `uid` if success.
+* `dirname` - String directory table name, without slashes
+* `key` - String|Buffer
+* `value` - String|Buffer
 ```js
 // SYNC
-db.put(dirname, key, value);
+db.put(dirname, key, value); // return String uid
 // ASYNC
-db.put(dirname, key, value, (error, uid) => {
+db.put(dirname, key, value, (error, uid) => { // uid is String or undefined if error
     if (error) { throw error; }
 });
 ```
@@ -85,9 +89,9 @@ db.put(dirname, key, value, (error, uid) => {
 Overwrite value if key exists, or create, if not. Return/callback `uid` if success.
 ```js
 // SYNC
-db.put(dirname, key, value);
+db.set(dirname, key, value); // return String uid
 // ASYNC
-db.put(dirname, key, value, (error, uid) => {
+db.set(dirname, key, value, (error, uid) => { // uid is String or undefined if error
     if (error) { throw error; }
 });
 ```
@@ -95,9 +99,9 @@ db.put(dirname, key, value, (error, uid) => {
 Append `value` if key exists, or create, if not. Return/callback `uid` if success.
 ```js
 // SYNC
-db.add(dirname, key, value);
+db.add(dirname, key, value); // return String uid
 // ASYNC
-db.add(dirname, key, value, (error, uid) => {
+db.add(dirname, key, value, (error, uid) => { // uid is String or undefined if error
     if (error) { throw error; }
 });
 ```
@@ -105,9 +109,9 @@ db.add(dirname, key, value, (error, uid) => {
 Read key `value`. Throw/callback `error` if key not exists. Return/callback `value` and `uid` if success.
 ```js
 // SYNC
-const { value, uid } = db.get(dirname, key);
+const { value, uid } = db.get(dirname, key); // value is Buffer and uid is String
 // ASYNC
-db.get(dirname, key, (error, value, uid) => {
+db.get(dirname, key, (error, value, uid) => { // value is Buffer and uid is String or undefined if error
     if (error) { throw error; }
 });
 ```
@@ -115,9 +119,9 @@ db.get(dirname, key, (error, value, uid) => {
 Delete `key`. Throw/callback `error` if key not exists. Return/callback `uid` if success.
 ```js
 // SYNC
-db.del(dirname, key);
+db.del(dirname, key); // return String uid
 // ASYNC
-db.del(dirname, key, (error, uid) => {
+db.del(dirname, key, (error, uid) => { // uid is String or undefined if error
     if (error) { throw error; }
 });
 ```
@@ -135,7 +139,7 @@ db.keys(dirname, (error, keylist) => { // without range select, return all
     if (error) { throw error; }
 });
  // example: without start point, return first two keys ( index: 0 and 1 )
-db.keys(dirname, { end: 2 }, (error, keylist) => {
+db.keys(dirname, { end: 2 }, (error, keylist) => { // keylist is Object or undefined if error
     if (error) { throw error; }
 });
 ```
@@ -143,9 +147,9 @@ db.keys(dirname, { end: 2 }, (error, keylist) => {
 Throw/callback `error` if key not exists. Return/callback `key` and `value` if success. See above `keylist` for `uid` and `keyhash`.
 ```js
 // SYNC
-const { key, value } = db.val(dirname, uid, keyhash);
+const { key, value } = db.val(dirname, uid, keyhash); // key and value is Buffer
 // ASYNC
-db.val(dirname, uid, keyhash, (error, key, value) => {
+db.val(dirname, uid, keyhash, (error, key, value) => { // key and value is Buffer or undefined if error
     if (error) { throw error; }
 });
 ```
@@ -158,7 +162,6 @@ Stream client object. Server call method functions is async `true` (by default),
 db.client(false);
 // call ASYNC method functions on server
 db.client();
-db.client(true); // true, is the default value
 ```
 ### Stream example
 ```js
