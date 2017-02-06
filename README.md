@@ -36,8 +36,8 @@ methodAsync(..., (...) => { ... }). // and so on...
 methodAsync(..., (...) => { ... });
 // ASYNC call example
 db. // < can be db or db.client() stream, see below
-set(dirname, key1, value1, (error, uid) => {}). // and so on...
-set(dirname, key2, value2, (error, uid) => {});
+put(dirname, key, value1, (error, uid) => {}). // and so on...
+add(dirname, key, value2, (error, uid) => {});
 ```
 ### `isdir(dirname)`
 If `dirname` exist, return/callback object `dirconfig`, or `undefined` if not.
