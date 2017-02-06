@@ -41,7 +41,7 @@ add(dirname, key, value2, (error, uid) => {});
 ```
 ### `isdir(dirname)`
 If `dirname` exist, return/callback object `dirconfig`, or `undefined` if not.
-* `dirname` - String directory table name, without slashes
+* `dirname` - String directory table name (folder), without slashes, e.g. `name`
 ```js
 // SYNC
 db.isdir(dirname);
@@ -49,7 +49,7 @@ db.isdir(dirname);
 db.isdir(dirname, dirconfig => { });
 ```
 ### `mkdir(dirname[, options])`
-Make dir name, if `dirname` exist, return/callback `dirname`, or throw/callback `error` if not. For more `options`, see below.
+Make a directory by name, not path, e.g. `name`. If `dirname` exist, throw/callback `error`. Return/callback `dirname` on success. For more `options`, see below.
 ```js
 // SYNC
 db.mkdir(dirname);
@@ -136,13 +136,13 @@ Return/callback object `keylist` if success.
 ```js
 // SYNC
 db.keys(dirname); // without range select, return all
-db.keys(dirname, { start: 1 }); // example: without end point, return all except first key ( index: 1, 2, ... )
-db.keys(dirname, { start: 0, end: 2 }); // example: return first two keys ( index: 0 and 1 )
+db.keys(dirname, { start: 1 }); // without end point, return all except first key ( index: 1, 2, ... )
+db.keys(dirname, { start: 0, end: 2 }); // return first two keys ( index: 0 and 1 )
 // ASYNC
 db.keys(dirname, (error, keylist) => { // without range select, return all
     if (error) { throw error; }
 });
- // example: without start point, return first two keys ( index: 0 and 1 )
+// without start point, return first two keys ( index: 0 and 1 )
 db.keys(dirname, { end: 2 }, (error, keylist) => { // keylist is Object or undefined if error
     if (error) { throw error; }
 });
