@@ -29,11 +29,15 @@ First time, make sure the directory exists, is empty, and have the right user pe
 const db = new dirdb('/dir/path/name');
 ```
 ### Chain calls
-All async method functions return the object they belong (`db`, `db.server` or `db.client`).
+All async method functions returns the object they belong (`db` core, or `db.client()` stream).
 ```js
-obj. // can be: db core or db.client stream
+obj. // can be: db or db.client() stream
 methodAsync(..., (...) => { ... }). // and so on...
 methodAsync(..., (...) => { ... });
+// ASYNC call example
+db. // < can be db or db.client() stream, see below
+set(dirname, key1, value1, (error, uid) => {}). // and so on...
+set(dirname, key2, value2, (error, uid) => {});
 ```
 ### `isdir(dirname)`
 If `dirname` exist, return/callback object `dirconfig`, or `undefined` if not.
