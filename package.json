@@ -1,13 +1,13 @@
 {
     "name": "dirdb",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "description": "DirDB key-value directory database",
     "main": "index.js",
     "scripts": {
         "test": "node test.js"
     },
     "dependencies": {
-        "rpc-json": "~0.4.1",
+        "rpc-json": "~1.0.0",
         "rm-dir": "~0.1.0"
     },
     "repository": {

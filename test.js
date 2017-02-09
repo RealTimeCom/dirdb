@@ -1,10 +1,10 @@
 /* TEST FILE - Copyright (c) 2017 dirdb - Tanase Laurentiu Iulian - https://github.com/RealTimeCom/dirdb */
 'use strict';
 
-const dirdb = require('./index.js'), fs = require('fs'), sep = require('path').sep;
+const dirdb = require('./index.js');
 
-const root = __dirname + sep + 'test';
-fs.mkdirSync(root); // make a test directory
+const root = __dirname + require('path').sep + 'test'; // test directory
+try { require('fs').mkdirSync(root); } catch (e) { } // make
 
 const db = new dirdb(root); // init database
 
