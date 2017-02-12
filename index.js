@@ -45,11 +45,11 @@ function request(resp, head, body) {
             switch (head.f) {
                 case 'mkdir':
                 case 'setgc':
-                case 'keys': this.db[head.f](head.d, head.o, (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r })); break;
+                case 'keys': this.db[head.f](head.d, head.o, (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: r })); break;
                 case 'put':
                 case 'set':
-                case 'add': this.db[head.f](head.d, body.slice(0, head.k), body.slice(head.k), (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r })); break;
-                case 'del': this.db.del(head.d, body, (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: e ? undefined : r })); break;
+                case 'add': this.db[head.f](head.d, body.slice(0, head.k), body.slice(head.k), (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: r })); break;
+                case 'del': this.db.del(head.d, body, (e, r) => resp({ f: head.f, e: e ? e.message : undefined, r: r })); break;
                 case 'get':
                     this.db.get(head.d, body, (e, value, r) => {
                         if (e) {
