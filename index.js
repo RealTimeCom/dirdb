@@ -26,11 +26,11 @@ function request(resp, head, body) {
                     case 'add': resp({ f: head.f, r: this.db[head.f](head.d, body.slice(0, head.k), body.slice(head.k)) }); break;
                     case 'del': resp({ f: head.f, r: this.db.del(head.d, body) }); break;
                     case 'get':
-                        const { val, uid } = db.get(head.d, body);
+                        const { val, uid } = this.db.get(head.d, body);
                         resp({ f: head.f, r: uid }, val);
                         break;
                     case 'val':
-                        const { key, value } = db.val(head.d, head.u, head.h);
+                        const { key, value } = this.db.val(head.d, head.u, head.h);
                         resp({ f: head.f, k: key.length }, Buffer.concat([key, value]));
                         break;
                     case 'rmdir': this.db.rmdir(head.d); resp({ f: head.f }); break;
