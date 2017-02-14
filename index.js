@@ -108,34 +108,34 @@ class client extends rpc.client {
 }
 client.prototype.mkdir = function(dir, opt, resp, sync) {
     if (typeof opt === 'function' && resp === undefined) { resp = opt; }
-    this.exec(resp, { s: sync ? true : this.sync, f: 'mkdir', d: dir, o: opt });
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'mkdir', d: dir, o: opt });
     return this;
 };
 client.prototype.rmdir = function(dir, resp, sync) {
-    this.exec(resp, { s: sync ? true : this.sync, f: 'rmdir', d: dir });
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'rmdir', d: dir });
     return this;
 };
 client.prototype.put = function(dir, key, val, resp, sync) {
     key = toBuffer(key);
-    this.exec(resp, { s: sync ? true : this.sync, f: 'put', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'put', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
     return this;
 };
 client.prototype.set = function(dir, key, val, resp, sync) {
     key = toBuffer(key);
-    this.exec(resp, { s: sync ? true : this.sync, f: 'set', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'set', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
     return this;
 };
 client.prototype.add = function(dir, key, val, resp, sync) {
     key = toBuffer(key);
-    this.exec(resp, { s: sync ? true : this.sync, f: 'add', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'add', d: dir, k: key.length }, Buffer.concat([key, toBuffer(val)]));
     return this;
 };
 client.prototype.get = function(dir, key, resp, sync) {
-    this.exec(resp, { s: sync ? true : this.sync, f: 'get', d: dir }, key);
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'get', d: dir }, key);
     return this;
 };
 client.prototype.del = function(dir, key, resp, sync) {
-    this.exec(resp, { s: sync ? true : this.sync, f: 'del', d: dir }, key);
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'del', d: dir }, key);
     return this;
 };
 client.prototype.list = function(resp) {
@@ -148,15 +148,15 @@ client.prototype.isdir = function(dir, resp) {
 };
 client.prototype.keys = function(dir, opt, resp, sync) {
     if (typeof opt === 'function' && resp === undefined) { resp = opt; }
-    this.exec(resp, { s: sync ? true : this.sync, f: 'keys', d: dir, o: opt });
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'keys', d: dir, o: opt });
     return this;
 };
 client.prototype.val = function(dir, uid, hash, resp, sync) {
-    this.exec(resp, { s: sync ? true : this.sync, f: 'val', d: dir, u: uid, h: hash });
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'val', d: dir, u: uid, h: hash });
     return this;
 };
 client.prototype.setgc = function(dir, opt, resp, sync) {
-    this.exec(resp, { s: sync ? true : this.sync, f: 'setgc', d: dir, o: opt ? true : false });
+    this.exec(resp, { s: sync === undefined ? this.sync : Boolean(sync), f: 'setgc', d: dir, o: opt ? true : false });
     return this;
 };
 
