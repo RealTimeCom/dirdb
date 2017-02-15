@@ -198,9 +198,8 @@ client.put(dirname, key, value, (error, uid) => {
 ### Socket stream example
 ```js
 const net = require('net');
-net.createServer(socket => {
-    socket.pipe(db.server()).pipe(socket);
-}).listen(function() { // socket server listen to a random port and address
+net.createServer(socket => socket.pipe(db.server()).pipe(socket)).
+listen(function() { // socket server listen to a random port and address
     const a = this.address(); // get the socket server port and address
     net.connect(a.port, a.address, function() {
         const client = db.client(); // default ASYNC methods on DB core
