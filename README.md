@@ -198,13 +198,12 @@ client.put(dirname, key, value, (error, uid) => {
 ### Socket stream example
 ```js
 const net = require('net');
-const server = db.server();
-const client = db.client();
 net.createServer(socket => {
-    socket.pipe(server).pipe(socket);
+    socket.pipe(db.server()).pipe(socket);
 }).listen(function() { // socket server listen to a random port and address
     const a = this.address(); // get the socket server port and address
     net.connect(a.port, a.address, function() {
+        const client = db.client();
         this.pipe(client).pipe(this);
         client.set(dirname, key, value, (error, uid) => {
             if (error) { throw error; }
