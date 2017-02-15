@@ -203,7 +203,7 @@ net.createServer(socket => {
 }).listen(function() { // socket server listen to a random port and address
     const a = this.address(); // get the socket server port and address
     net.connect(a.port, a.address, function() {
-        const client = db.client();
+        const client = db.client(); // default ASYNC methods on DB core
         this.pipe(client).pipe(this);
         client.set(dirname, key, value, (error, uid) => {
             if (error) { throw error; }

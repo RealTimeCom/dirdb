@@ -154,13 +154,12 @@ function end() {
 // TEST SOCKET STREAM
 function testSocket() {
     const net = require('net');
-    const server = db.server();
-    const client = db.client(); // default (false) ASYNC methods on server
     net.createServer(socket => {
         // filter by IPv4: if (socket.remoteAddress !== '127.0.0.1') { return socket.destroy(); }
-        socket.pipe(server).pipe(socket); // pipe db.server 'server' into socket.client 'socket'
+        socket.pipe(db.server()).pipe(socket); // pipe db.server 'server' into socket.client 'socket'
     }).listen(function() {
         const a = this.address(); // get the socket.server port and address
+        const client = db.client(); // default (false) ASYNC methods on DB core
         client.server = this; // optional, attach socket.server 'this' to the db.client 'client'
         net.connect(a.port, a.address, function() { // connect to socket.server Port 'a.port' and IP 'a.address'
             this.pipe(client).pipe(this); // pipe db.client 'client' into socket.client 'this'
