@@ -254,6 +254,30 @@ console.log('divisor', Math.pow(35, 4)); // 1500625
 * `sha1-base64`  Math.pow(64, 27) - 64 unique characters, 27 long max level
 * `sha1-hex`     Math.pow(35, 40) - 35 unique characters, 40 long max level
 
+### High Availability, Backup and Restore Operations
+DirDB is very light and simple database, because of that, HA / Back-Up / Restore can be done with tools like <a href="https://rsync.samba.org"><b>rsync</b></a> or <a href="https://www.cis.upenn.edu/~bcpierce/unison/"><b>unison</b></a>. The back-up directory can be local or network
+```sh
+# Backup example
+$ rsync -abqz --delete dirA dirB
+# High Availability example
+$ unison -auto dirA/ dirB/
+```
+* `dirA` local directory ( primary )
+* `dirB` remote / network directory ( secondary )
+```js
+// High Availability, using unison
+
+const dbA = new dirdb('dirA'); // primary DB
+// Host A ( localhost )
+net.createServer(skA => skA.pipe(dbA.server()).pipe(skA)).listen( ... );
+
+// dirB > ssh://dev@192.168.1.10/home/alice/dirB
+// OR
+// dirB > socket://remote_host:port_num/path/to/dirB
+const dbB = new dirdb('dirB'); // secondary DB
+// Host B ( remote ) - another node.js server
+net.createServer(skB => skB.pipe(dbB.server()).pipe(skB)).listen( ... );
+```
 
 **For more info, consult or run the <a href="https://github.com/RealTimeCom/dirdb/blob/master/test.js"><b>test.js</b></a> file.**
 
