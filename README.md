@@ -268,13 +268,13 @@ $ unison -auto dirA/ dirB/
 // High Availability, using unison
 const dbA = new dirdb(dirA); // primary DB
 // Host A ( local )
-net.createServer(skA => skA.pipe(dbA.server()).pipe(skA)).listen( ... );
+net.createServer(socket => socket.pipe(dbA.server()).pipe(socket));
 // dirB > ssh://dev@192.168.1.10/home/alice/dirB
 // OR
 // dirB > socket://remote_host:port_num/path/to/dirB
 const dbB = new dirdb(dirB); // secondary DB
 // Host B ( remote ) - another node.js server
-net.createServer(skB => skB.pipe(dbB.server()).pipe(skB)).listen( ... );
+net.createServer(socket => socket.pipe(dbB.server()).pipe(socket));
 ```
 
 **For more info, consult or run the <a href="https://github.com/RealTimeCom/dirdb/blob/master/test.js"><b>test.js</b></a> file.**

@@ -1,6 +1,6 @@
 {
     "name": "dirdb",
-    "version": "1.2.5",
+    "version": "1.2.6",
     "description": "DirDB key-value directory database",
     "main": "index.js",
     "scripts": {
