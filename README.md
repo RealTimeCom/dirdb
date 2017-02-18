@@ -268,7 +268,7 @@ $ unison -auto dirA/ dirB/
 // High Availability, using unison
 
 const dbA = new dirdb('dirA'); // primary DB
-// Host A ( localhost )
+// Host A ( local )
 net.createServer(skA => skA.pipe(dbA.server()).pipe(skA)).listen( ... );
 
 // dirB > ssh://dev@192.168.1.10/home/alice/dirB
