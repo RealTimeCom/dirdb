@@ -255,10 +255,10 @@ console.log('divisor', Math.pow(35, 4)); // 1500625
 * `sha1-hex`     Math.pow(35, 40) - 35 unique characters, 40 long max level
 
 ### High Availability, Backup and Restore Operations
-DirDB is very light and simple database, because of that, HA / Back-Up / Restore can be done with tools like <a href="https://rsync.samba.org"><b>rsync</b></a> or <a href="https://www.cis.upenn.edu/~bcpierce/unison/"><b>unison</b></a>. The back-up / sync directory `dirB` ( secondary ) can be local / another drive or remote ( over the network ).
+DirDB is very light and simple database, because of that, HA / Back-Up / Restore can be done with tools like <a href="https://rsync.samba.org"><b>rsync</b></a> or <a href="https://www.cis.upenn.edu/~bcpierce/unison/"><b>unison</b></a>.
 ```sh
 # Backup example
-$ rsync -abqz --delete dirA dirB
+$ rsync -abqz dirA dirB
 # High Availability example
 $ unison -auto dirA/ dirB/
 ```
@@ -266,15 +266,13 @@ $ unison -auto dirA/ dirB/
 * `dirB` remote / network directory ( secondary )
 ```js
 // High Availability, using unison
-
-const dbA = new dirdb('dirA'); // primary DB
+const dbA = new dirdb(dirA); // primary DB
 // Host A ( local )
 net.createServer(skA => skA.pipe(dbA.server()).pipe(skA)).listen( ... );
-
 // dirB > ssh://dev@192.168.1.10/home/alice/dirB
 // OR
 // dirB > socket://remote_host:port_num/path/to/dirB
-const dbB = new dirdb('dirB'); // secondary DB
+const dbB = new dirdb(dirB); // secondary DB
 // Host B ( remote ) - another node.js server
 net.createServer(skB => skB.pipe(dbB.server()).pipe(skB)).listen( ... );
 ```
