@@ -255,7 +255,7 @@ console.log('divisor', Math.pow(35, 4)); // 1500625
 * `sha1-hex`     Math.pow(35, 40) - 35 unique characters, 40 long max level
 
 ### High Availability, Backup and Restore Operations
-DirDB is very light and simple database, because of that, HA / Back-Up / Restore can be done with tools like <a href="https://rsync.samba.org"><b>rsync</b></a> or <a href="https://www.cis.upenn.edu/~bcpierce/unison/"><b>unison</b></a>. The back-up / sync directory `dirB` can be local / another drive or over the network.
+DirDB is very light and simple database, because of that, HA / Back-Up / Restore can be done with tools like <a href="https://rsync.samba.org"><b>rsync</b></a> or <a href="https://www.cis.upenn.edu/~bcpierce/unison/"><b>unison</b></a>. The back-up / sync directory `dirB` ( secondary ) can be local / another drive or remote ( over the network ).
 ```sh
 # Backup example
 $ rsync -abqz --delete dirA dirB
