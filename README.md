@@ -81,6 +81,7 @@ Throw/callback `error` if key exists. Return/callback `{ uid, hash, path }` if s
 * `dirname` - String directory table name, without slashes
 * `key` - String|Buffer
 * `value` - String|Buffer
+
 Return `{ uid, hash, path }`
 * `uid` - String unique id ( birthDateInt36.Index )
 * `hash` - String key hash ( using: `dirconfig` algorithm + digest )
