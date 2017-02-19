@@ -14,26 +14,6 @@ if (!db.isdir('auth')) { // verify if dir 'auth' exists
     console.log('list', db.list());
 }
 console.log('setgc', db.setgc('auth', false));
-/** console.log:
----
-list {}
-mkdir auth
-list { auth:
-   { level: 2,
-     dmode: 448,
-     fmode: 384,
-     algorithm: 'md5',
-     digest: 'base64',
-     compress: 'none',
-     gc: true } }
-setgc { level: 2,
-  dmode: 448,
-  fmode: 384,
-  algorithm: 'md5',
-  digest: 'base64',
-  compress: 'none',
-  gc: false }
-*/
 
 // TEST SYNC
 console.log('put', db.put('auth', 'user', 'pass')); // throws error if key exists
@@ -43,6 +23,7 @@ console.log('set', db.set('auth', 'user', 'PA')); // overwrite value if key exis
 console.log('add', db.add('auth', 'user', 'SS')); // append value if key exists
 console.log('add', db.add('auth', 'user1', 'pass1')); // if key not found, db.add() will create
 console.log('set', db.set('auth', 'user2', 'pass2')); // if key not found, db.set() will create
+console.log('stats', db.stats('auth', 'user2')); // key value file fs.Stats
 // get the keys list of dir 'auth', with optional range select { start: 0, end: 3 }
 const keys = db.keys('auth', { start: 0, end: 3 }); // range is very useful for pagination and not only :)
 console.log('keys', keys);
@@ -52,51 +33,38 @@ for (let uid of Object.keys(keys)) { // for each key
     // db.set('auth', key, 'newValue'); < overwrite value
     console.log('del', db.del('auth', key)); // key = 'user' (buffer)
 }
-/** console.log:
----
-put iyrsvz8l.0
-get pass iyrsvz8l.0
-set iyrsvz8l.0
-add iyrsvz8l.0
-add iyrsvz8o.1
-set iyrsvz8o.2
-keys { 'iyrsvz8l.0': '7hHLsZBS5AsHqsDKBgwj7g',
-  'iyrsvz8o.1': 'JMnhXlKvxHwiW3V@e@4fnQ',
-  'iyrsvz8o.2': 'fljWO2AZfOtVocSHmJo3IA' }
-val user PASS
-del iyrsvz8l.0
-val user1 pass1
-del iyrsvz8o.1
-val user2 pass2
-del iyrsvz8o.2
-*/
 
 // TEST ASYNC, those callbacks are MUCH faster and compact than async/await or Promise ;)
 function test(db, cb) {
-    db.put('auth', 'user', 'pass', (e, uid) => { // put, e is defined if key exists
-        console.log('put', e, uid);
+    db.put('auth', 'user', 'pass', (e, uid, hash, path) => { // put, e is defined if key exists
+        console.log('put', e, uid, hash, path);
         if (!e && uid) {
-            db.get('auth', 'user', (e, value, uid) => {
-                console.log('get', e, value ? value.toString() : value, uid);
+            db.get('auth', 'user', (e, value, uid, hash, path) => {
+                console.log('get', e, value.toString(), uid, hash, path);
                 if (!e && uid) {
-                    db.set('auth', 'user', 'PA', (e, uid) => { // set, overwrite value if key exists
-                        console.log('set', e, uid);
+                    db.set('auth', 'user', 'PA', (e, uid, hash, path) => { // set, overwrite value if key exists
+                        console.log('set', e, uid, hash, path);
                         if (!e && uid) {
-                            db.add('auth', 'user', 'SS', (e, uid) => { // append value if key exists
-                                console.log('add', e, uid);
+                            db.add('auth', 'user', 'SS', (e, uid, hash, path) => { // append value if key exists
+                                console.log('add', e, uid, hash, path);
                                 if (!e && uid) {
-                                    db.keys('auth', { end: 1 }, (e, keys) => { // select first key, range = { end: 1 }
-                                        console.log('keys', e, keys);
-                                        if (!e && keys) {
-                                            const uid = Object.keys(keys)[0]; // read first key from the list
-                                            db.val('auth', uid, keys[uid], (e, key, value) => {
-                                                console.log('val', e, key.toString(), value.toString());
-                                                if (!e) {
-                                                    // db.set('auth', key, 'newValue', (e, uid) => { ... }); < overwrite value
-                                                    db.del('auth', key, (e, uid) => { // key = 'user' (buffer)
-                                                        console.log('del', e, uid);
-                                                        if (!e && uid) {
-                                                            if (cb) { cb(); } // call next
+                                    db.stats('auth', 'user', (e, uid, hash, path, stats) => { // key value file fs.Stats
+                                        console.log('stats', e, uid, hash, path, stats);
+                                        if (!e && uid) {
+                                            db.keys('auth', { end: 1 }, (e, keys) => { // select first key, range = { end: 1 }
+                                                console.log('keys', e, keys);
+                                                if (!e && keys) {
+                                                    const uid = Object.keys(keys)[0]; // read first key from the list
+                                                    db.val('auth', uid, keys[uid], (e, key, value, path) => {
+                                                        console.log('val', e, key.toString(), value.toString(), path);
+                                                        if (!e) {
+                                                            // db.set('auth', key, 'newValue', (e, uid) => {}); < overwrite value
+                                                            db.del('auth', key, (e, uid) => { // key = 'user' (buffer)
+                                                                console.log('del', e, uid);
+                                                                if (!e && uid) {
+                                                                    if (cb) { cb(); } // call next
+                                                                }
+                                                            });
                                                         }
                                                     });
                                                 }
@@ -113,16 +81,6 @@ function test(db, cb) {
     });
 }
 test(db, testStream); // core db test
-/** console.log:
----
-put undefined iyrsvz93.3
-get undefined pass iyrsvz93.3
-set undefined iyrsvz93.3
-add undefined iyrsvz93.3
-keys undefined { 'iyrsvz93.3': '7hHLsZBS5AsHqsDKBgwj7g' }
-val undefined user PASS
-del undefined iyrsvz93.3
-*/
 
 // TEST STREAM
 function testStream() {
@@ -130,16 +88,6 @@ function testStream() {
     client.pipe(db.server()).pipe(client);
     test(client, testSocket); // stream test
 }
-/** console.log:
----
-put undefined iyrsvz9p.4
-get undefined pass iyrsvz9p.4
-set undefined iyrsvz9p.4
-add undefined iyrsvz9p.4
-keys undefined { 'iyrsvz9p.4': '7hHLsZBS5AsHqsDKBgwj7g' }
-val undefined user PASS
-del undefined iyrsvz9p.4
-*/
 
 function end() {
     this.rmdir('auth', e => { // remove dir 'auth', is safe, server db core sync call
@@ -167,16 +115,3 @@ function testSocket() {
         });
     }).once('close', () => console.log('socket.server close'));
 }
-/** console.log:
----
-put undefined iyrsvzac.5
-get undefined pass iyrsvzac.5
-set undefined iyrsvzac.5
-add undefined iyrsvzac.5
-keys undefined { 'iyrsvzac.5': '7hHLsZBS5AsHqsDKBgwj7g' }
-val undefined user PASS
-del undefined iyrsvzac.5
-rmdir undefined
-list {}
-socket.server close
-*/

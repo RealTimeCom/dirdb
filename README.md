@@ -36,25 +36,25 @@ methodAsync(..., (...) => { ... }). // and so on...
 methodAsync(..., (...) => { ... });
 // ASYNC call example
 db. // < can be: db or db.client() stream, see below
-put(dirname, key, value1, (error, uid) => {}). // and so on...
-add(dirname, key, value2, (error, uid) => {});
+put(dirname, key, value1, e => {}). // and so on...
+add(dirname, key, value2, e => {});
 ```
 ### `isdir(dirname)`
 If `dirname` exist, return/callback object `dirconfig`, or `undefined` if not.
 * `dirname` - String directory table name (folder), without slashes, e.g. `name`
 ```js
 // SYNC
-db.isdir(dirname);
+const dirconfig = db.isdir(dirname);
 // ASYNC
 db.isdir(dirname, dirconfig => { });
 ```
 ### `mkdir(dirname[, options])`
-Make a directory by name, not path, e.g. `name`. If `dirname` exist, throw/callback `error`. Return/callback `dirname` on success. For more `options`, see below.
+Make a directory by name, not path, e.g. `name`. If `dirname` exist, throw/callback `error`. Return/callback `name` on success. For more `options`, see below.
 ```js
 // SYNC
-db.mkdir(dirname);
+const name = db.mkdir(dirname);
 // ASYNC
-db.mkdir(dirname, (error, dirname) => {
+db.mkdir(dirname, (error, name) => {
     if (error) { throw error; }
 });
 ```
@@ -72,50 +72,54 @@ db.rmdir(dirname, error => {
 Return/callback `dbconfig` object `{ dirname: dirconfig, ... }`.
 ```js
 // SYNC
-db.list(); // return Object dbconfig
+const dbconfig = db.list();
 // ASYNC
 db.list(dbconfig => { });
 ```
 ### `put(dirname, key, value[, callback])`
-Throw/callback `error` if key exists. Return/callback `uid` if success.
+Throw/callback `error` if key exists. Return/callback `{ uid, hash, path }` if success.
 * `dirname` - String directory table name, without slashes
 * `key` - String|Buffer
 * `value` - String|Buffer
+Return `{ uid, hash, path }`
+* `uid` - String unique id ( birthDateInt36.Index )
+* `hash` - String key hash ( using: `dirconfig` algorithm + digest )
+* `path` - String path key ( file `path.k` ) and value ( file `path.v` )
 ```js
 // SYNC
-db.put(dirname, key, value); // return String uid
+const { uid, hash, path } = db.put(dirname, key, value);
 // ASYNC
-db.put(dirname, key, value, (error, uid) => { // uid is String or undefined if error
+db.put(dirname, key, value, (error, uid, hash, path) => {
     if (error) { throw error; }
 });
 ```
 ### `set(dirname, key, value[, callback])`
-Overwrite value if key exists, or create, if not. Return/callback `uid` if success.
+Overwrite value if key exists, or create, if not. Return/callback `{ uid, hash, path }` if success.
 ```js
 // SYNC
-db.set(dirname, key, value); // return String uid
+const { uid, hash, path } = db.set(dirname, key, value);
 // ASYNC
-db.set(dirname, key, value, (error, uid) => { // uid is String or undefined if error
+db.set(dirname, key, value, (error, uid, hash, path) => {
     if (error) { throw error; }
 });
 ```
 ### `add(dirname, key, value[, callback])`
-Append `value` if key exists, or create, if not. Return/callback `uid` if success.
+Append `value` if key exists, or create, if not. Return/callback `{ uid, hash, path }` if success.
 ```js
 // SYNC
-db.add(dirname, key, value); // return String uid
+const { uid, hash, path } = db.add(dirname, key, value);
 // ASYNC
-db.add(dirname, key, value, (error, uid) => { // uid is String or undefined if error
+db.add(dirname, key, value, (error, uid, hash, path) => {
     if (error) { throw error; }
 });
 ```
 ### `get(dirname, key[, callback])`
-Read key `value`. Throw/callback `error` if key not exists. Return/callback `value` and `uid` if success.
+Read key `value`. Throw/callback `error` if key not exists. Return/callback `{ value, uid, hash, path }` if success.
 ```js
 // SYNC
-const { value, uid } = db.get(dirname, key); // value is Buffer and uid is String
+const { value, uid, hash, path } = db.get(dirname, key); // value is Buffer
 // ASYNC
-db.get(dirname, key, (error, value, uid) => { // value is Buffer and uid is String or undefined if error
+db.get(dirname, key, (error, value, uid, hash, path) => { // value is Buffer or undefined if error
     if (error) { throw error; }
 });
 ```
@@ -123,7 +127,7 @@ db.get(dirname, key, (error, value, uid) => { // value is Buffer and uid is Stri
 Delete `key`. Throw/callback `error` if key not exists. Return/callback `uid` if success.
 ```js
 // SYNC
-db.del(dirname, key); // return String uid
+const uid = db.del(dirname, key);
 // ASYNC
 db.del(dirname, key, (error, uid) => { // uid is String or undefined if error
     if (error) { throw error; }
@@ -135,9 +139,9 @@ Return/callback object `keylist` if success.
 * `keylist` - Object `{ uid: keyhash, ... }`
 ```js
 // SYNC
-db.keys(dirname); // without range select, return all
-db.keys(dirname, { start: 1 }); // without end point, return all except first key ( index: 1, 2, ... )
-db.keys(dirname, { start: 0, end: 2 }); // return first two keys ( index: 0 and 1 )
+const keylistA = db.keys(dirname); // without range select, return all
+const keylistB = db.keys(dirname, { start: 1 }); // without end point, return all except first key ( index: 1, 2, ... )
+const keylistC = db.keys(dirname, { start: 0, end: 2 }); // return first two keys ( index: 0 and 1 )
 // ASYNC
 db.keys(dirname, (error, keylist) => { // without range select, return all
     if (error) { throw error; }
@@ -148,20 +152,36 @@ db.keys(dirname, { end: 2 }, (error, keylist) => { // keylist is Object or undef
 });
 ```
 ### `val(dirname, uid, keyhash[, callback])`
-Throw/callback `error` if key not exists. Return/callback `key` and `value` if success. See the above `keylist` object for `uid` and `keyhash`.
+Throw/callback `error` if key not exists. Return/callback `{ key, value, path }` if success. See the above `keylist` object for `uid` and `keyhash`.
 ```js
 // SYNC
-const { key, value } = db.val(dirname, uid, keyhash); // key and value is Buffer
+const { key, value, path } = db.val(dirname, uid, keyhash); // key and value is Buffer
 // ASYNC
-db.val(dirname, uid, keyhash, (error, key, value) => { // key and value is Buffer or undefined if error
+db.val(dirname, uid, keyhash, (error, key, value, path) => { // key and value is Buffer or undefined if error
     if (error) { throw error; }
+});
+```
+### `stats()`
+Throw/callback `error` if key not exists. Return/callback `{ uid, hash, path, stats }` if success.
+*  `stats` - Object, key value file `lstat` <a href="https://nodejs.org/api/fs.html#fs_class_fs_stats">fs.Stats</a>
+```js
+// SYNC
+const { uid, hash, path, stats } = db.stats(dirname, key);
+// ASYNC
+db.stats(dirname, key, (error, uid, hash, path, stats) => {
+    if (error) { throw error; }
+    // fs.Stats file: path + '.v'
+    // require('fs').lstat(path + '.v', (error, stats) => {})
+    console.log('Birth time', stats.birthtime);
+    console.log('Modified time', stats.mtime);
+    console.log('Key value size', stats.size);
 });
 ```
 ### `setgc(dirname, option)`
 Set `dirname` GC boolean option. When delete a key using `del()` function, if GC is enabled (true), the directory where the key-value was saved, is deleted if is empty. Throw/callback `error` if dirname not exists. Return/callback `dirconfig` if success.
 ```js
 // SYNC
-db.setgc(dirname, true); // return Object dirconfig
+const dirconfig = db.setgc(dirname, true);
 // ASYNC
 db.setgc(dirname, false, (error, dirconfig) => { // dirconfig is Object or undefined if error
     if (error) { throw error; }
@@ -175,9 +195,9 @@ Server stream object. See the stream / socket examples below, of how to pipe ser
 Client stream object. Server call method functions is sync `false` (by default), for sync set `true`. The sync/async server method can be set individually on any client function, with the last argument.
 ```js
 // call SYNC method functions on server
-db.client(true);
+const clientS = db.client(true);
 // call ASYNC method functions on server
-db.client(); // or false
+const clientA = db.client(); // or false
 
 const client = db.client();
 client.set(dirname, key, value, (error, uid) => {
@@ -275,6 +295,25 @@ net.createServer(socket => socket.pipe(dbA.server()).pipe(socket));
 const dbB = new dirdb(dirB); // secondary DB
 // Host B ( remote ) - another node.js server
 net.createServer(socket => socket.pipe(dbB.server()).pipe(socket));
+```
+### DB core only (not client), async stream write/read big values
+```js
+const fs = require('fs');
+// db core, write big value, source file '/path/big/file.ext'
+db.put(dirname, key, '', (error, uid, hash, path) => { // or db.set() to overwrite, if key exists
+    if (error) { throw error; }
+    fs.createReadStream('/path/big/file.ext').pipe(fs.createWriteStream(path + '.v'));
+});
+// db core, append big value, source file '/path/big/file.ext'
+db.add(dirname, key, '', (error, uid, hash, path) => {
+    if (error) { throw error; }
+    fs.createReadStream('/path/big/file.ext').pipe(fs.createWriteStream(path + '.v', { flags: 'a' }));
+});
+// db core, read big value
+db.stats(dirname, key, (error, uid, hash, path, stats) => {
+    if (error) { throw error; }
+    fs.createReadStream(path + '.v').on('data', data => {});
+});
 ```
 
 **For more info, consult or run the <a href="https://github.com/RealTimeCom/dirdb/blob/master/test.js"><b>test.js</b></a> file.**
