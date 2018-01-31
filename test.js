@@ -1,8 +1,58 @@
-/* TEST FILE - Copyright (c) 2017 dirdb - Tanase Laurentiu Iulian - https://github.com/RealTimeCom/dirdb */
+/* TEST FILE - Copyright (c) 2018 dirdb - Tanase Laurentiu Iulian - https://github.com/RealTimeCom/dirdb */
 'use strict';
 
 const dirdb = require('./index.js');
 
+const db = new dirdb('D:/DB', { gc: false }); // sync scan
+
+/*
+db.mkdir('test4', { level: 4 }).
+then(r => {
+    console.log('mkdir', r);
+    return db.list();
+}).
+then(r => {
+    console.log('list>>', r);
+}).
+catch(e => { console.error('e>>', e); });
+*/
+
+
+const server = dirdb.server(db);
+const client = dirdb.client();
+
+server.on('serverError', e => console.log('onServerError', e));
+client.on('clientError', e => console.log('onClientError', e));
+
+client.pipe(server).pipe(client);
+
+client.rmdir('test2').
+then(r => {
+    console.log('rmdir', r);
+    return client.list();
+}).
+then(r => {
+    console.log('list>>', r);
+}).
+catch(e => { console.error('e>>', e); });
+
+
+/*
+const net = require('net');
+const server = dirdb.server(db);
+server.on('serverError', e => console.log('onServerError', e));
+net.createServer(socket => {
+        console.log('client connected on server');
+        socket.on('error', e => { console.log('client connection error', e); }).
+        socket.on('end', () => { console.log('client disconnected from server'); });
+        socket.pipe(server).pipe(socket);
+}).listen(8080, '127.0.0.1', function() {
+    const a = this.address();
+    console.log('server listen', a.port, a.address);
+}).on('close', () => console.log('server close'));
+*/
+
+/*
 const root = __dirname + require('path').sep + 'test'; // test directory
 try { require('fs').mkdirSync(root); } catch (e) { } // make
 
@@ -36,6 +86,9 @@ for (let uid of Object.keys(keys)) { // for each key
 
 // TEST ASYNC, those callbacks are MUCH faster and compact than async/await or Promise ;)
 function test(db, cb) {
+    db.put('auth', 'user', 'pass', (e, uid, hash, path) => { // put, e is defined if key exists
+
+
     db.put('auth', 'user', 'pass', (e, uid, hash, path) => { // put, e is defined if key exists
         console.log('put', e, uid, hash, path);
         if (!e && uid) {
@@ -79,6 +132,7 @@ function test(db, cb) {
             });
         }
     });
+
 }
 test(db, testStream); // core db test
 
@@ -115,3 +169,4 @@ function testSocket() {
         });
     }).once('close', () => console.log('socket.server close'));
 }
+*/

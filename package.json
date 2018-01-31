@@ -1,28 +1,31 @@
 {
     "name": "dirdb",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "description": "DirDB key-value directory database",
     "main": "index.js",
     "scripts": {
         "test": "node test.js"
     },
     "dependencies": {
-        "rpc-json": "~1.0.0",
-        "rm-dir": "~0.1.0"
+        "rpc-json": "~2.3.0",
+        "rm-dir": "~0.2.2"
     },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/RealTimeCom/dirdb.git"
     },
     "keywords": [
+        "dirdb",
         "db",
         "database",
+        "noSQL",
         "dir",
         "directory",
         "storage",
         "store",
         "key",
         "value",
+        "key-value",
         "stream",
         "cache"
     ],
@@ -31,5 +34,11 @@
     "bugs": {
         "url": "https://github.com/RealTimeCom/dirdb/issues"
     },
-    "homepage": "https://github.com/RealTimeCom/dirdb"
+    "homepage": "https://github.com/RealTimeCom/dirdb",
+    "eslintConfig": {
+        "env": {
+            "node": true,
+            "es6": true
+        }
+    }
 }
