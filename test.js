@@ -37,19 +37,36 @@ then(r => {
 catch(e => { console.error('e>>', e); });
 
 
-/*
+/* file: server.js
 const net = require('net');
-const server = dirdb.server(db);
-server.on('serverError', e => console.log('onServerError', e));
 net.createServer(socket => {
         console.log('client connected on server');
         socket.on('error', e => { console.log('client connection error', e); }).
         socket.on('end', () => { console.log('client disconnected from server'); });
+        const server = dirdb.server(db); // create new server object here for data flow reset
+        server.on('serverError', e => console.log('onServerError', e));
         socket.pipe(server).pipe(socket);
 }).listen(8080, '127.0.0.1', function() {
     const a = this.address();
     console.log('server listen', a.port, a.address);
 }).on('close', () => console.log('server close'));
+*/
+
+/* file: client.js
+const net = require('net');
+net.connect(8080, '127.0.0.1', function() {
+    console.log('client connected to server');
+    const client = dirdb.client(); // create new client object here for data flow reset
+    client.on('clientError', e => console.log('onClientError', e));
+    this.pipe(client).pipe(this);
+    client.mkdir('test3', { level: 3 }).
+    then(r => {
+        console.log('r>>', r);
+    }).
+    catch(e => { console.log('e>>', e); });
+}).
+on('error', e => { console.log('connection error', e); }).
+on('end', () => { console.log('disconnected from server'); });
 */
 
 /*
