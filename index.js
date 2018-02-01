@@ -1,12 +1,5 @@
 /* SOURCE FILE - Copyright (c) 2018 dirdb - Tanase Laurentiu Iulian - https://github.com/RealTimeCom/dirdb */
 
-// TODO:
-// db.vstats(uid, hash)
-// db.vdel(uid, hash)
-// db.vget(uid, hash) - alias db.val()
-// db.rungc(optimize) - delete all empty dirs and, if optimize is true: delete all keys without value and all values without key, and all dir contents if not in schema level/algorithm/digest, except .dridb.json file
-// db.cpdir(fromdir, todir, overwrite) - copy fromdir contents into todir, optional overwrite (true|false) todir keys value
-
 const fs = require('fs'),
     path = require('path'),
     crypto = require('crypto'),
@@ -21,7 +14,7 @@ class dirdb {
     constructor(dir, opt) {
         this._opt = typeof opt === 'object' ? options(opt, dirdb._def) : dirdb._def; // overwrite default dir options
         this._cnf = '.dirdb.json'; // dir config file name
-        this._uid = 0; // unique identifier
+        this._cnt = 0; // counter for _uid
         try {
             if (typeof dir !== 'string') { throw new Error('invalid dir type "' + (typeof dir) + '", String expected'); }
             dir = path.normalize(dir);
@@ -36,22 +29,49 @@ class dirdb {
     static get _def() { // default dir options
         return { level: 3, dmode: 0o700, fmode: 0o600, algorithm: 'md5', digest: 'base64', compress: 'none', gc: true };
     }
+    get _uid() {
+        if (this._cnt === 1e9) { this._cnt = 0; } // reset on max '1e9' value
+        return new Date().getTime().toString(36) + '.' + (this._cnt++).toString(36); // extract: parseInt(uid.split('.')[0], 36) - birthtime
+    }
+
     static server(db) { return new server(db); }
     static client() { return new client; }
 
     mkdir(dir, opt) {
-        if (!(dir = safe(dir))) { return Promise.reject(new Error('invalid dir value')); }
-        if (dir in this._mem) { return Promise.reject(new Error('dir "' + dir + '" exists in cache')); }
+        if (!(dir = safe(dir))) { return Promise.reject(new Error('mkdir() invalid dir value')); }
+        if (dir in this._mem) { return Promise.reject(new Error('mkdir() dir "' + dir + '" exists in cache')); }
         opt = options(opt, this._opt); // parse options
         return pr(fs.mkdir)(this._dir + path.sep + dir, opt.dmode). // make dir
         then(pr(fs.writeFile)(this._dir + path.sep + dir + path.sep + this._cnf, JSON.stringify(opt), { mode: opt.fmode })). // write 'this._cnf' file config
-        then(() => { this._mem[dir] = opt; }); // add dir conf on cache 'this._mem'
+        then(() => {
+            this._mem[dir] = opt; // add dir conf on cache 'this._mem'
+            return { [dir]: opt };
+        });
+    }
+    setgc(dir, opt) {
+        if (!(typeof dir === 'string' && dir in this._mem)) { return Promise.reject(new Error('setgc() dir "' + dir + '" not found in cache')); }
+        opt = Boolean(opt);
+        const mem = this._mem[dir];
+        if (mem.gc !== opt) {
+            mem.gc = opt;
+            return pr(fs.writeFile)(this._dir + path.sep + dir + path.sep + this._cnf, JSON.stringify(mem), { mode: mem.fmode }). // rewrite gc value on 'this._cnf' file config
+            then(() => {
+                this._mem[dir].gc = opt; // rewrite gc value on cache 'this._mem'
+                return opt;
+            });
+        } else {
+            return Promise.resolve(opt);
+        }
     }
     rmdir(dir) {
-        if (!(typeof dir === 'string' && dir in this._mem)) { return Promise.reject(new Error('dir "' + dir + '" not found in cache')); }
+        if (!(typeof dir === 'string' && dir in this._mem)) { return Promise.reject(new Error('rmdir() dir "' + dir + '" not found in cache')); }
         return rmdir.promise(this._dir + path.sep + dir).then(() => {
             if (dir in this._mem) { delete this._mem[dir]; } // remove dir conf from cache 'this._mem'
+            return dir;
         });
+    }
+    isdir(dir) {
+        return Promise.resolve(typeof dir === 'string' && dir in this._mem);
     }
     list() {
         return Promise.resolve(this._mem);
@@ -74,8 +94,14 @@ class client extends rpc.client {
     mkdir(dir, opt) {
         return this.exec({ f: 'mkdir', d: dir, o: opt }).then(bk1);
     }
+    setgc(dir, opt) {
+        return this.exec({ f: 'setgc', d: dir, o: Boolean(opt) }).then(bk1);
+    }
     rmdir(dir) {
         return this.exec({ f: 'rmdir', d: dir }).then(bk1);
+    }
+    isdir(dir) {
+        return this.exec({ f: 'isdir', d: dir }).then(bk1);
     }
     list() {
         return this.exec({ f: 'list' }).then(bk1);
@@ -145,8 +171,10 @@ async function request(resp, head, body) {
         if (!('f' in head && typeof head.f === 'string')) { throw new Error('header function is undefined'); }
         switch (head.f) {
             case 'mkdir':
+            case 'setgc':
                 return await resp({ r: await this.db[head.f](head.d, head.o) });
             case 'rmdir':
+            case 'isdir':
                 return await resp({ r: await this.db[head.f](head.d) });
             case 'list':
                 return await resp({ r: await this.db[head.f]() });

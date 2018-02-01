@@ -7,7 +7,7 @@
         "test": "node test.js"
     },
     "dependencies": {
-        "rpc-json": "~2.3.0",
+        "rpc-json": "~2.3.4",
         "rm-dir": "~0.2.2"
     },
     "repository": {

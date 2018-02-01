@@ -26,9 +26,9 @@ client.on('clientError', e => console.log('onClientError', e));
 
 client.pipe(server).pipe(client);
 
-client.rmdir('test2').
+client.isdir('test3').
 then(r => {
-    console.log('rmdir', r);
+    console.log('isdir', r);
     return client.list();
 }).
 then(r => {
@@ -36,14 +36,13 @@ then(r => {
 }).
 catch(e => { console.error('e>>', e); });
 
-
 /* file: server.js
 const net = require('net');
 net.createServer(socket => {
         console.log('client connected on server');
         socket.on('error', e => { console.log('client connection error', e); }).
         socket.on('end', () => { console.log('client disconnected from server'); });
-        const server = dirdb.server(db); // create new server object here for data flow reset
+        const server = dirdb.server(db); // create new server object here, for data flow reset
         server.on('serverError', e => console.log('onServerError', e));
         socket.pipe(server).pipe(socket);
 }).listen(8080, '127.0.0.1', function() {
@@ -56,7 +55,7 @@ net.createServer(socket => {
 const net = require('net');
 net.connect(8080, '127.0.0.1', function() {
     console.log('client connected to server');
-    const client = dirdb.client(); // create new client object here for data flow reset
+    const client = dirdb.client(); // create new client object here, for data flow reset
     client.on('clientError', e => console.log('onClientError', e));
     this.pipe(client).pipe(this);
     client.mkdir('test3', { level: 3 }).
